@@ -1,0 +1,27 @@
+environment: test
+
+mysql:
+    host: localhost
+    port: 3306
+    user: test
+    password: test
+    database: test_db
+
+postgres:
+    host: localhost
+    port: 5432
+    user: test
+    password: test
+    database: test_db
+
+redis:
+    host: localhost
+    port: 6379
+
+kafka:
+    brokers:
+        - localhost:9092
+    topic: test_topic
+
+elasticsearch:
+    url: http://localhost:9200

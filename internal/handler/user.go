@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Napat/golang-testcontainers-demo/internal/model"
@@ -18,10 +19,10 @@ import (
 type UserHandler struct {
     userRepo  *user.UserRepository
     cache     *cache.Cache
-    producer  *event.Producer
+    producer  *event.ProducerRepository
 }
 
-func NewUserHandler(userRepo *user.UserRepository, cache *cache.Cache, producer *event.Producer) *UserHandler {
+func NewUserHandler(userRepo *user.UserRepository, cache *cache.Cache, producer *event.ProducerRepository) *UserHandler {
     return &UserHandler{
         userRepo:  userRepo,
         cache:     cache,
@@ -29,7 +30,20 @@ func NewUserHandler(userRepo *user.UserRepository, cache *cache.Cache, producer 
     }
 }
 
-func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json")
+
+    switch {
+    case r.Method == http.MethodPost && r.URL.Path == "/users":
+        h.createUser(w, r)
+    case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/users/"):
+        h.getUser(w, r)
+    default:
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+    }
+}
+
+func (h *UserHandler) createUser(w http.ResponseWriter, r *http.Request) {
     var user model.User
     ctx := r.Context()
 
@@ -44,7 +58,6 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
     }
 
     // Cache the user
-    // ctx := context.Background()
     cacheKey := fmt.Sprintf("user:%d", user.ID)
     if err := h.cache.Set(ctx, cacheKey, user, time.Hour); err != nil {
         log.Printf("Failed to cache user: %v", err)
@@ -59,7 +72,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
     json.NewEncoder(w).Encode(user)
 }
 
-func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) getUser(w http.ResponseWriter, r *http.Request) {
     ctx := r.Context()
     vars := mux.Vars(r)
     id, err := strconv.ParseInt(vars["id"], 10, 64)

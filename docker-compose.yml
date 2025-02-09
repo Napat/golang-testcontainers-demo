@@ -1,0 +1,44 @@
+version: "3.8"
+
+services:
+    mysql:
+        image: mysql:8
+        environment:
+            MYSQL_ROOT_PASSWORD: password
+            MYSQL_DATABASE: testdb
+        ports:
+            - "3306:3306"
+
+    postgres:
+        image: postgres:14-alpine
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: password
+            POSTGRES_DB: testdb
+        ports:
+            - "5432:5432"
+
+    redis:
+        image: redis:6
+        ports:
+            - "6379:6379"
+
+    kafka:
+        image: confluentinc/cp-kafka:7.8.0
+        environment:
+            KAFKA_BROKER_ID: 1
+            KAFKA_LISTENERS: PLAINTEXT://:9092
+            KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+            KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+        ports:
+            - "9092:9092"
+
+    elasticsearch:
+        image: docker.elastic.co/elasticsearch/elasticsearch:8.17.1
+        environment:
+            - discovery.type=single-node
+            - xpack.security.enabled=false
+            - ES_JAVA_OPTS=-Xms512m -Xmx512m
+        ports:
+            - "9200:9200"
+        mem_limit: 2g

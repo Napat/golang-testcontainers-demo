@@ -19,7 +19,7 @@ type ProducerTestSuite struct {
     container testcontainers.Container
     ctx context.Context
     producer  sarama.SyncProducer
-    repo      *event.Producer
+    repo      *event.ProducerRepository
 }
 
 

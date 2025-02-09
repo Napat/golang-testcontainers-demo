@@ -6,19 +6,19 @@ import (
 	"github.com/IBM/sarama"
 )
 
-type Producer struct {
+type ProducerRepository struct {
     producer sarama.SyncProducer
     topic    string
 }
 
-func NewProducerRepository(producer sarama.SyncProducer, topic string) *Producer {
-    return &Producer{
+func NewProducerRepository(producer sarama.SyncProducer, topic string) *ProducerRepository {
+    return &ProducerRepository{
         producer: producer,
         topic:    topic,
     }
 }
 
-func (p *Producer) SendMessage(key string, value interface{}) error {
+func (p *ProducerRepository) SendMessage(key string, value interface{}) error {
     data, err := json.Marshal(value)
     if err != nil {
         return err

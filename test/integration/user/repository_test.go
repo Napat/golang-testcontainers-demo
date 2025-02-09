@@ -115,28 +115,26 @@ func (s *UserRepositoryTestSuite) TearDownSuite() {
 func (s *UserRepositoryTestSuite) TestCreateAndGetUser() {
 	ctx := context.Background()
 
-	// Create complete test user
-	now := time.Now().UTC()
 	testUser := &model.User{
-		Username:  "testuser",
-		Email:     "test@example.com",
-		Password:  "password123",
-		FirstName: "Test",
-		LastName:  "User",
-		Status:    model.StatusActive,
-		CreatedAt: now,
-		UpdatedAt: now,
+		Username: "testuser",
+		Email:    "test@example.com",
+		FullName: "Test User",        // Make sure this is set
+		Password: "password123",      // Set password directly
+		Status:   model.StatusActive,
 	}
-	s.Require().NoError(testUser.SetPassword(testUser.Password))
 
-	// Test Create
 	err := s.repo.Create(ctx, testUser)
 	s.Require().NoError(err)
 	s.NotZero(testUser.ID)
 
-	// Test Get
 	fetchedUser, err := s.repo.GetByID(ctx, testUser.ID)
 	s.Require().NoError(err)
 	s.Equal(testUser.Username, fetchedUser.Username)
 	s.Equal(testUser.Email, fetchedUser.Email)
+	s.Equal(testUser.FullName, fetchedUser.FullName)
+	s.Equal(testUser.Password, fetchedUser.Password)  // Changed from PasswordHash to Password
+	s.Equal(testUser.Status, fetchedUser.Status)
+	s.NotZero(fetchedUser.CreatedAt)
+	s.NotZero(fetchedUser.UpdatedAt)
+	s.Equal(1, fetchedUser.Version)
 }

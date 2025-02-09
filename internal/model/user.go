@@ -6,28 +6,46 @@ import (
 	"regexp"
 	"strings"
 	"time"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
+type UserStatus string
+
+const (
+	StatusActive    UserStatus = "active"
+	StatusInactive  UserStatus = "inactive"
+	StatusSuspended UserStatus = "suspended"
+)
+
+// User represents a user in the system
+// @Description User account information
 type User struct {
-	ID        int64     `json:"id" db:"id"`
-	Username  string    `json:"username" db:"username"`
-	Email     string    `json:"email" db:"email"`
-	Password  string    `json:"-" db:"password"`  // "-" means this field won't be included in JSON
-	FirstName string    `json:"first_name" db:"first_name"`
-	LastName  string    `json:"last_name" db:"last_name"`
-	Status    string    `json:"status" db:"status"`
-	CreatedAt time.Time `json:"created_at" db:"created_at,omitempty"`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at,omitempty"`
+	ID        int64      `json:"id" db:"id"`
+	Username  string     `json:"username" db:"username"`
+	Email     string     `json:"email" db:"email"`
+	FullName  string     `json:"full_name" db:"full_name"`
+	Password  string     `json:"password,omitempty" db:"password"`
+	Status    UserStatus `json:"status" db:"status"`
+	CreatedAt time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at" db:"updated_at"`
+	Version   int        `json:"version" db:"version"`
 }
 
-// UserStatus represents the possible states of a user account
-const (
-	StatusActive   = "active"
-	StatusInactive = "inactive"
-	StatusBanned   = "banned"
-)
+// UserCreate represents user creation request
+// @Description User creation request body
+type UserCreate struct {
+	Username string `json:"username" binding:"required"`
+	Email    string `json:"email" binding:"required,email"`
+	FullName string `json:"full_name" binding:"required"`
+	Password string `json:"password" binding:"required,min=8"`
+}
+
+// UserUpdate represents user update request
+// @Description User update request body
+type UserUpdate struct {
+	Email    string `json:"email,omitempty" binding:"omitempty,email"`
+	FullName string `json:"full_name,omitempty"`
+	Status   string `json:"status,omitempty" binding:"omitempty,oneof=active inactive suspended"`
+}
 
 // NewUser creates a new user with default values
 func NewUser(username, email, password string) *User {
@@ -41,25 +59,18 @@ func NewUser(username, email, password string) *User {
 	}
 }
 
-// SetPassword hashes and sets the user's password
+// SetPassword sets the user's password directly
 func (u *User) SetPassword(password string) error {
 	if len(password) < 8 {
 		return errors.New("password must be at least 8 characters long")
 	}
-
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-
-	u.Password = string(hashedPassword)
+	u.Password = password
 	return nil
 }
 
 // CheckPassword verifies if the provided password matches the user's password
 func (u *User) CheckPassword(password string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
-	return err == nil
+	return u.Password == password
 }
 
 // Validate performs validation on user data
@@ -72,7 +83,7 @@ func (u *User) Validate() error {
 		return err
 	}
 
-	if u.Status != StatusActive && u.Status != StatusInactive && u.Status != StatusBanned {
+	if u.Status != StatusActive && u.Status != StatusInactive && u.Status != StatusSuspended {
 		return errors.New("invalid user status")
 	}
 
@@ -121,7 +132,7 @@ func (u *User) validateEmail() error {
 
 // GetFullName returns the user's full name
 func (u *User) GetFullName() string {
-	return strings.TrimSpace(u.FirstName + " " + u.LastName)
+	return strings.TrimSpace(u.FullName)
 }
 
 // IsActive checks if the user account is active
@@ -141,9 +152,9 @@ func (u *User) Activate() {
 	u.UpdatedAt = time.Now()
 }
 
-// Ban sets the user's status to banned
+// Ban sets the user's status to suspended
 func (u *User) Ban() {
-	u.Status = StatusBanned
+	u.Status = StatusSuspended
 	u.UpdatedAt = time.Now()
 }
 
@@ -153,8 +164,7 @@ func (u *User) ToPublicUser() map[string]interface{} {
 		"id":         u.ID,
 		"username":   u.Username,
 		"email":      u.Email,
-		"first_name": u.FirstName,
-		"last_name":  u.LastName,
+		"full_name":  u.FullName,
 		"status":     u.Status,
 		"created_at": u.CreatedAt,
 	}

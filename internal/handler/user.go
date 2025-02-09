@@ -18,11 +18,11 @@ import (
 
 type UserHandler struct {
     userRepo  *user.UserRepository
-    cache     *cache.Cache
+    cache     *cache.CacheRepository
     producer  *event.ProducerRepository
 }
 
-func NewUserHandler(userRepo *user.UserRepository, cache *cache.Cache, producer *event.ProducerRepository) *UserHandler {
+func NewUserHandler(userRepo *user.UserRepository, cache *cache.CacheRepository, producer *event.ProducerRepository) *UserHandler {
     return &UserHandler{
         userRepo:  userRepo,
         cache:     cache,

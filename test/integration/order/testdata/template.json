@@ -1,0 +1,47 @@
+{
+    "index_patterns": [
+        "orders-*"
+    ],
+    "template": {
+        "settings": {
+            "number_of_shards": 1,
+            "number_of_replicas": 0
+        },
+        "mappings": {
+            "properties": {
+                "id": {
+                    "type": "keyword"
+                },
+                "user_id": {
+                    "type": "keyword"
+                },
+                "status": {
+                    "type": "keyword"
+                },
+                "total_amount": {
+                    "type": "float"
+                },
+                "items": {
+                    "type": "nested",
+                    "properties": {
+                        "product_id": {
+                            "type": "keyword"
+                        },
+                        "quantity": {
+                            "type": "integer"
+                        },
+                        "price": {
+                            "type": "float"
+                        }
+                    }
+                },
+                "created_at": {
+                    "type": "date"
+                },
+                "updated_at": {
+                    "type": "date"
+                }
+            }
+        }
+    }
+}

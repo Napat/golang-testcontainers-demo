@@ -1,0 +1,123 @@
+basePath: /
+definitions:
+  github_com_Napat_golang-testcontainers-demo_internal_model.Error:
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+    type: object
+  github_com_Napat_golang-testcontainers-demo_internal_model.User:
+    description: User account information
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      full_name:
+        type: string
+      id:
+        type: integer
+      password:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+      username:
+        type: string
+      version:
+        type: integer
+    type: object
+  github_com_Napat_golang-testcontainers-demo_internal_model.UserCreate:
+    description: User creation request body
+    properties:
+      email:
+        type: string
+      full_name:
+        type: string
+      password:
+        minLength: 8
+        type: string
+      username:
+        type: string
+    required:
+    - email
+    - full_name
+    - password
+    - username
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API documentation for Testcontainers Demo project
+  title: Testcontainers Demo API
+  version: "1.0"
+paths:
+  /users:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user with the provided details
+      parameters:
+      - description: User creation request
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_internal_model.UserCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_internal_model.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_internal_model.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_internal_model.Error'
+      summary: Create a new user
+      tags:
+      - users
+  /users/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get user details by their ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_internal_model.User'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_internal_model.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_internal_model.Error'
+      summary: Get user by ID
+      tags:
+      - users
+schemes:
+- http
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

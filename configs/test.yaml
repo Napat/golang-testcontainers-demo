@@ -1,27 +1,37 @@
 environment: test
 
+server:
+    port: 8081 # Different port for test environment
+
 mysql:
     host: localhost
-    port: 3306
+    port: 33306 # Different port for test environment
     user: test
     password: test
-    database: test_db
+    database: testdb
 
-postgres:
+postgresql:
     host: localhost
-    port: 5432
+    port: 35432 # Different port for test environment
     user: test
     password: test
-    database: test_db
+    database: testdb
 
 redis:
     host: localhost
-    port: 6379
+    port: 36379 # Different port for test environment
 
 kafka:
     brokers:
-        - localhost:9092
-    topic: test_topic
+        - localhost:39092 # Different port for test environment
+    topic: test-events
 
 elasticsearch:
-    url: http://localhost:9200
+    url: http://localhost:39200 # Different port for test environment
+
+# Test-specific settings
+test:
+    cleanup_enabled: true
+    retry_attempts: 3
+    retry_delay: 1s
+    parallel_tests: true

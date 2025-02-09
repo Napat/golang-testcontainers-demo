@@ -19,9 +19,22 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 }
 
 func (r *UserRepository) Create(ctx context.Context, user *model.User) error {
-    query := `INSERT INTO users (username, email, password, status, created_at, updated_at) 
-            VALUES (?, ?, ?, ?, NOW(), NOW())`
-    result, err := r.db.ExecContext(ctx, query, user.Username, user.Email, user.Password, user.Status)
+    query := `
+        INSERT INTO users (
+            username, 
+            email, 
+            full_name,
+            password, 
+            status
+        ) VALUES (?, ?, ?, ?, ?)
+    `
+    result, err := r.db.ExecContext(ctx, query,
+        user.Username,
+        user.Email,
+        user.FullName,
+        user.Password,
+        user.Status,
+    )
     if err != nil {
         return err
     }
@@ -35,9 +48,30 @@ func (r *UserRepository) Create(ctx context.Context, user *model.User) error {
 
 func (r *UserRepository) GetByID(ctx context.Context, id int64) (*model.User, error) {
     user := &model.User{}
-    query := `SELECT id, username, email, status, created_at, updated_at FROM users WHERE id = ?`
+    query := `
+        SELECT 
+            id, 
+            username, 
+            email, 
+            full_name,
+            password,
+            status, 
+            created_at, 
+            updated_at,
+            version
+        FROM users 
+        WHERE id = ?
+    `
     err := r.db.QueryRowContext(ctx, query, id).Scan(
-        &user.ID, &user.Username, &user.Email, &user.Status, &user.CreatedAt, &user.UpdatedAt,
+        &user.ID,
+        &user.Username,
+        &user.Email,
+        &user.FullName,
+        &user.Password,
+        &user.Status,
+        &user.CreatedAt,
+        &user.UpdatedAt,
+        &user.Version,
     )
     if err == sql.ErrNoRows {
         return nil, ErrUserNotFound
@@ -49,8 +83,22 @@ func (r *UserRepository) GetByID(ctx context.Context, id int64) (*model.User, er
 }
 
 func (r *UserRepository) Update(ctx context.Context, user *model.User) error {
-    query := `UPDATE users SET username=?, email=?, status=?, updated_at=NOW() WHERE id=?`
-    result, err := r.db.ExecContext(ctx, query, user.Username, user.Email, user.Status, user.ID)
+    query := `
+        UPDATE users 
+        SET 
+            username = ?,
+            email = ?,
+            full_name = ?,
+            status = ?
+        WHERE id = ?
+    `
+    result, err := r.db.ExecContext(ctx, query,
+        user.Username,
+        user.Email,
+        user.FullName,
+        user.Status,
+        user.ID,
+    )
     if err != nil {
         return err
     }
@@ -65,7 +113,7 @@ func (r *UserRepository) Update(ctx context.Context, user *model.User) error {
 }
 
 func (r *UserRepository) Delete(ctx context.Context, id int64) error {
-    result, err := r.db.ExecContext(ctx, "DELETE FROM users WHERE id=?", id)
+    result, err := r.db.ExecContext(ctx, "DELETE FROM users WHERE id = ?", id)
     if err != nil {
         return err
     }

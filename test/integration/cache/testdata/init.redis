@@ -1,0 +1,17 @@
+# User session cache
+SET user:session:123 "{\"user_id\":1,\"username\":\"testuser\",\"expires_at\":\"2024-12-31T23:59:59Z\"}"
+
+# Product cache
+SET product:1 "{\"id\":1,\"name\":\"Sample Product\",\"price\":99.99,\"stock\":100}"
+
+# Rate limiting
+SET rate_limit:api:user:1 "10"
+EXPIRE rate_limit:api:user:1 3600
+
+# Feature flags
+HSET feature_flags:prod active_features "[]"
+HSET feature_flags:prod disabled_features "[\"beta_feature\"]"
+
+# Test counters
+SET counter:visits 100
+SET counter:api_calls 500

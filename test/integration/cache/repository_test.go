@@ -3,7 +3,6 @@ package cache
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -20,9 +19,8 @@ import (
 type CacheRepositoryTestSuite struct {
     integration.BaseTestSuite
     container testcontainers.Container
-	ctx 	context.Context
     client    *redis.Client
-    repo      *cache.Cache
+    repo      *cache.CacheRepository
 }
 
 // TestCacheRepository is the entry point for running the CacheRepositoryTestSuite.
@@ -54,13 +52,11 @@ func TestCacheRepository(t *testing.T) {
 // It doesn't return any values, but it populates the suite's fields with the necessary objects for testing.
 func (s *CacheRepositoryTestSuite) SetupSuite() {
     s.BaseTestSuite.SetupSuite()
-	s.ctx = context.Background()
+    ctx := context.Background()
 
-    redisContainer, err := tcRedis.Run(s.ctx,
-        "redis:6",
+    redisContainer, err := tcRedis.RunContainer(ctx,
+        testcontainers.WithImage("redis:6"),
         tcRedis.WithSnapshotting(10, 1),
-		tcRedis.WithLogLevel(tcRedis.LogLevelVerbose),
-		tcRedis.WithConfigFile(filepath.Join("testdata", "redis6.conf")),
         testcontainers.WithWaitStrategy(
             wait.ForLog("Ready to accept connections").
                 WithStartupTimeout(time.Minute),
@@ -70,19 +66,17 @@ func (s *CacheRepositoryTestSuite) SetupSuite() {
     s.container = redisContainer
 
     // Get connection details
-    host, err := redisContainer.Host(s.ctx)
+    host, err := redisContainer.Host(ctx)
     s.Require().NoError(err)
-    port, err := redisContainer.MappedPort(s.ctx, "6379")
+    port, err := redisContainer.MappedPort(ctx, "6379")
     s.Require().NoError(err)
 
-    // Connect to Redis
+    // Create Redis client
     client := redis.NewClient(&redis.Options{
         Addr: fmt.Sprintf("%s:%s", host, port.Port()),
     })
+    s.Require().NoError(client.Ping(ctx).Err())
     s.client = client
-
-    // Verify connection
-    s.Require().NoError(s.client.Ping(s.ctx).Err())
 
     // Initialize repository
     s.repo = cache.NewCacheRepository(client)
@@ -103,6 +97,10 @@ func (s *CacheRepositoryTestSuite) TearDownSuite() {
     if s.container != nil {
         s.CleanupContainer(s.container)
     }
+}
+
+func (s *CacheRepositoryTestSuite) SetupTest() {
+    s.client.FlushAll(context.Background())
 }
 
 // TestSetAndGet tests the Set and Get methods of the CacheRepository.

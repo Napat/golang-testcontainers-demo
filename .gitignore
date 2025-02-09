@@ -1,0 +1,29 @@
+# IDE
+.idea/
+.vscode/
+
+# Dependencies
+vendor/
+
+# Build
+bin/
+dist/
+
+# Test coverage
+coverage.out
+coverage.html
+
+# Docker volumes
+data/
+volumes/
+mysql-data/
+postgres-data/
+redis-data/
+elasticsearch-data/
+kafka-data/
+
+# Logs
+*.log
+
+# Don't ignore swagger docs
+!api/docs/

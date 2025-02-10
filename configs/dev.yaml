@@ -28,3 +28,9 @@ kafka:
 
 elasticsearch:
     url: http://localhost:9200
+
+tracing:
+    enabled: true
+    serviceName: "testcontainers-demo"
+    collectorUrl: "localhost:4318"
+    samplingRatio: 1.0

@@ -1,0 +1,35 @@
+### Create a new order
+POST http://localhost:8080/orders
+Content-Type: application/json
+
+{
+    "id": "order-1",
+    "customer_id": "cust-1",
+    "status": "pending",
+    "total": 299.99,
+    "payment_method": "credit_card",
+    "items": [
+        {
+            "product_id": "prod-1",
+            "product_name": "TestProduct",
+            "quantity": 1,
+            "unit_price": 299.99,
+            "subtotal": 299.99
+        }
+    ]
+}
+
+### Search orders by customer ID
+GET http://localhost:8080/orders/search
+Content-Type: application/json
+
+{
+    "query": {
+        "match": {
+            "customer_id": "cust-1"
+        }
+    }
+}
+
+### Simple search across all fields
+GET http://localhost:8080/orders/simple-search?q=TestProduct

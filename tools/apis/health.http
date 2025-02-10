@@ -1,0 +1,8 @@
+### Health check
+GET http://localhost:8080/health
+
+### Liveness probe
+GET http://localhost:8080/health/live
+
+### Readiness probe
+GET http://localhost:8080/health/ready

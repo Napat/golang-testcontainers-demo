@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Napat/golang-testcontainers-demo/internal/model"
-	"github.com/Napat/golang-testcontainers-demo/internal/repository/user"
+	"github.com/Napat/golang-testcontainers-demo/internal/repository/repository_user"
+	"github.com/Napat/golang-testcontainers-demo/pkg/model"
 	"github.com/Napat/golang-testcontainers-demo/test/integration"
 	_ "github.com/go-sql-driver/mysql" // Add MySQL driver
 	"github.com/stretchr/testify/suite"
@@ -22,7 +22,7 @@ type UserRepositoryTestSuite struct {
 	integration.BaseTestSuite
 	container testcontainers.Container
 	db        *sql.DB
-	repo      *user.UserRepository
+	repo      *repository_user.UserRepository
 }
 
 // TestUserRepository runs the UserRepositoryTestSuite.
@@ -76,16 +76,16 @@ func (s *UserRepositoryTestSuite) SetupSuite() {
 
 	// Create users table
 	// _, err = db.Exec(`
-    //     CREATE TABLE users (
-    //         id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    //         username VARCHAR(255) NOT NULL,
-    //         email VARCHAR(255) NOT NULL
-    //     )
-    // `)
+	//     CREATE TABLE users (
+	//         id BIGINT AUTO_INCREMENT PRIMARY KEY,
+	//         username VARCHAR(255) NOT NULL,
+	//         email VARCHAR(255) NOT NULL
+	//     )
+	// `)
 	// s.Require().NoError(err)
 
 	// Initialize repository
-	s.repo = user.NewUserRepository(db)
+	s.repo = repository_user.NewUserRepository(db)
 }
 
 // TearDownSuite tears down the test environment for the UserRepositoryTestSuite.
@@ -118,8 +118,8 @@ func (s *UserRepositoryTestSuite) TestCreateAndGetUser() {
 	testUser := &model.User{
 		Username: "testuser",
 		Email:    "test@example.com",
-		FullName: "Test User",        // Make sure this is set
-		Password: "password123",      // Set password directly
+		FullName: "Test User",   // Make sure this is set
+		Password: "password123", // Set password directly
 		Status:   model.StatusActive,
 	}
 
@@ -132,7 +132,7 @@ func (s *UserRepositoryTestSuite) TestCreateAndGetUser() {
 	s.Equal(testUser.Username, fetchedUser.Username)
 	s.Equal(testUser.Email, fetchedUser.Email)
 	s.Equal(testUser.FullName, fetchedUser.FullName)
-	s.Equal(testUser.Password, fetchedUser.Password)  // Changed from PasswordHash to Password
+	s.Equal(testUser.Password, fetchedUser.Password) // Changed from PasswordHash to Password
 	s.Equal(testUser.Status, fetchedUser.Status)
 	s.NotZero(fetchedUser.CreatedAt)
 	s.NotZero(fetchedUser.UpdatedAt)

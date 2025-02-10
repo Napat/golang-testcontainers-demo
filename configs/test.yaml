@@ -1,33 +1,39 @@
 environment: test
 
 server:
-    port: 8081 # Different port for test environment
+    port: 8081
 
 mysql:
     host: localhost
-    port: 33306 # Different port for test environment
+    port: 3307
     user: test
     password: test
     database: testdb
 
 postgresql:
     host: localhost
-    port: 35432 # Different port for test environment
+    port: 5433
     user: test
     password: test
     database: testdb
 
 redis:
     host: localhost
-    port: 36379 # Different port for test environment
+    port: 6380
 
 kafka:
     brokers:
-        - localhost:39092 # Different port for test environment
+        - localhost:9093
     topic: test-events
 
 elasticsearch:
-    url: http://localhost:39200 # Different port for test environment
+    url: http://localhost:9201
+
+tracing:
+    enabled: false
+    serviceName: "testcontainers-demo-test"
+    collectorUrl: "localhost:4318"
+    samplingRatio: 1.0
 
 # Test-specific settings
 test:

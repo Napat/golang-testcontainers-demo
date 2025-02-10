@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
     mysql:
         image: mysql:8
@@ -29,13 +27,27 @@ services:
 
     kafka:
         image: confluentinc/cp-kafka:7.8.0
-        environment:
-            KAFKA_BROKER_ID: 1
-            KAFKA_LISTENERS: PLAINTEXT://:9092
-            KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-            KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+        hostname: kafka
+        container_name: kafka
         ports:
             - "9092:9092"
+            - "9093:9093"
+        environment:
+            KAFKA_KRAFT_MODE: "true"
+            KAFKA_PROCESS_ROLES: controller,broker
+            KAFKA_NODE_ID: 1
+            KAFKA_CONTROLLER_QUORUM_VOTERS: "1@localhost:9093"
+            KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+            KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+            KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+            KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+            KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+            KAFKA_LOG_DIRS: /tmp/kafka/data
+            KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+            KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+            KAFKA_LOG_RETENTION_HOURS: 168
+            KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+            CLUSTER_ID: "Mk3OEYBSD34fcwNTJENDM2Qk"
 
     elasticsearch:
         image: docker.elastic.co/elasticsearch/elasticsearch:8.17.1
@@ -49,20 +61,39 @@ services:
         volumes:
             - ./init/elasticsearch:/usr/share/elasticsearch/init
         command: >
-            /bin/bash -c "
+            /bin/sh -c '
+            /usr/local/bin/docker-entrypoint.sh elasticsearch &
+            while ! curl -s http://localhost:9200 >/dev/null;
+            do
+                sleep 1;
+            done;
             if [ ! -f /usr/share/elasticsearch/.initialized ]; then
-                while ! curl -s http://localhost:9200 > /dev/null; do sleep 1; done;
                 for f in /usr/share/elasticsearch/init/*.json; do
-                    curl -X PUT 'http://localhost:9200/_index_template/template_1' -H 'Content-Type: application/json' -d @$$f
-                done
-                touch /usr/share/elasticsearch/.initialized
-            fi
-            & /usr/local/bin/docker-entrypoint.sh elasticsearch-node"
+                    [ -f "$$f" ] || continue;
+                    curl -X PUT "http://localhost:9200/_index_template/template_1" \
+                        -H "Content-Type: application/json" \
+                        -d @"$$f";
+                done;
+                touch /usr/share/elasticsearch/.initialized;
+            fi;
+            wait
+            '
+
+    kibana:
+        image: docker.elastic.co/kibana/kibana:8.17.1
+        environment:
+            - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+            - ELASTICSEARCH_URL=http://elasticsearch:9200
+        ports:
+            - "5601:5601"
+        depends_on:
+            - elasticsearch
 
     jaeger:
         image: jaegertracing/all-in-one:latest
-        ports:
-            - "14268:14268" # collector
-            - "16686:16686" # web UI
         environment:
             - COLLECTOR_OTLP_ENABLED=true
+            - COLLECTOR_OTLP_HTTP_HOST_PORT=4318
+        ports:
+            - "4318:4318" # OTLP HTTP port
+            - "16686:16686" # Web UI

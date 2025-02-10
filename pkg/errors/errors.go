@@ -9,8 +9,8 @@ import (
 type Error struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
-	Op      string `json:"op,omitempty"`    // Operation that failed
-	Err     error  `json:"-"`              // Underlying error
+	Op      string `json:"op,omitempty"` // Operation that failed
+	Err     error  `json:"-"`            // Underlying error
 }
 
 func (e *Error) Error() string {

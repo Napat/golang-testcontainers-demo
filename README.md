@@ -61,19 +61,19 @@ Run specific tests:
 
 ```sh
 # MySQL tests - User Repository
-go test -v -cover -coverpkg=./internal/repository/user/... ./test/integration/user/...
+go test -v -cover -coverpkg=./internal/repository/repository_user/... ./test/integration/user/...
 
 # PostgreSQL tests - Product Repository
-go test -v -cover -coverpkg=./internal/repository/product/... ./test/integration/product/...
+go test -v -cover -coverpkg=./internal/repository/repository_product/... ./test/integration/product/...
 
 # Redis tests - Cache Repository
 go test -v -cover -coverpkg=./internal/repository/cache/... ./test/integration/cache/...
 
 # Kafka tests - Event Producer Repository
-go test -v -cover -coverpkg=./internal/repository/event/... ./test/integration/event/...
+go test -v -cover -coverpkg=./internal/repository/repository_event/... ./test/integration/event/...
 
 # ElasticSearch tests - Order Repository and API
-go test -v -cover -coverpkg=./internal/repository/order/...,./internal/handler/... ./test/integration/order/...
+go test -v -cover -coverpkg=./internal/repository/repository_order/...,./internal/handler/... ./test/integration/order/...
 ```
 
 ## Test Coverage
@@ -101,8 +101,8 @@ ok      github.com/Napat/golang-testcontainers-demo/...    12.323s  coverage: 85
 Total coverage: 85.2%
 
 $ make coverage-by-package
-github.com/Napat/golang-testcontainers-demo/internal/model/user.go:31:      NewUser          100.0%
-github.com/Napat/golang-testcontainers-demo/internal/repository/user/user.go:45:    Create    90.0%
+github.com/Napat/golang-testcontainers-demo/pkg/model/user.go:31:      NewUser          100.0%
+github.com/Napat/golang-testcontainers-demo/internal/repository/repository_user/user.go:45:    Create    90.0%
 ...
 total:                                                                                85.2%
 ```
@@ -190,21 +190,72 @@ docker compose up -d
 
 ## Request Tracing
 
-This project uses OpenTelemetry with Jaeger for distributed tracing. Traces provide insights into request flows and help diagnose performance issues.
+This project uses OpenTelemetry with OTLP HTTP exporter to send traces to Jaeger for distributed tracing.
 
-### Tracing Setup
+### Setup and Testing Steps
 
-The application automatically sends traces to Jaeger, which is included in the Docker Compose setup:
+1. Start the Jaeger container and other services:
 
-```sh
-# Start Jaeger with other services
-docker-compose up -d jaeger
-
-# Access Jaeger UI
-open http://localhost:16686
+```bash
+docker compose up -d
 ```
 
-### Available Trace Information
+2. Run the application:
+
+```bash
+# Set configuration path
+export CONFIG_PATH=configs/dev.yaml
+
+# Start the application
+go run ./cmd/api/main.go
+```
+
+3. The application should now be running on http://localhost:8080
+4. Test the tracing by making some API calls:
+
+```bash
+# Create a user
+curl -X POST http://localhost:8080/users \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "username": "johndoe",
+    "email": "john@example.com",
+    "full_name": "John Doe",
+    "password": "password123"
+  }'
+
+# Get user by ID
+curl http://localhost:8080/users/1
+
+# List all users
+curl http://localhost:8080/users
+
+# Send message to Kafka
+curl -X POST http://localhost:8080/messages \
+  -H 'Content-Type: application/json' \
+  -d '{"content": "Hello World"}'
+
+# Search documents in Elasticsearch
+curl http://localhost:8080/search?q=example
+```
+
+5. View traces in Jaeger UI:
+
+   - Open http://localhost:16686 in your browser
+   - Select the service "testcontainers-demo"
+   - Click "Find Traces" to see the trace details
+   - You can see the complete request flow including:
+      - HTTP endpoints
+      - Database operations
+      - Kafka messages
+      - Elasticsearch queries
+
+6. To stop the application:
+
+   - Press Ctrl+C to stop the Go application
+   - Run `docker compose down` to stop the containers
+
+### Additional Tracing Configuration
 
 The following information is captured in traces:
 
@@ -253,6 +304,79 @@ defer span.End()
 span.SetAttributes(attribute.String("key", "value"))
 ```
 
+### Example API calls to test tracing:
+
+```bash
+# Create a user
+curl -X POST http://localhost:8080/users \
+  -H 'Content-Type: application/json' \
+  -d '{"name": "John Doe", "email": "john@example.com"}'
+
+# Get user by ID
+curl http://localhost:8080/users/1
+
+# List all users
+curl http://localhost:8080/users
+
+# Create a product
+curl -X POST http://localhost:8080/products \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 1,
+    "sku": "PROD-001",
+    "name": "Test Product",
+    "description": "A test product",
+    "price": 299.99,
+    "stock": 100
+  }'
+
+# Create an order
+curl -X POST http://localhost:8080/orders \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "order-1",
+    "customer_id": "cust-1",
+    "status": "pending",
+    "total": 299.99,
+    "payment_method": "credit_card",
+    "items": [
+      {
+        "product_id": "prod-1",
+        "product_name": "Test Product",
+        "quantity": 1,
+        "unit_price": 299.99,
+        "subtotal": 299.99
+      }
+    ]
+  }'
+
+# Search orders with Elasticsearch query
+curl -X GET http://localhost:8080/orders/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": {
+      "match": {
+        "customer_id": "cust-1"
+      }
+    }
+  }'
+
+# Send message to Kafka
+curl -X POST http://localhost:8080/messages \
+  -H 'Content-Type: application/json' \
+  -d '{"content": "Hello World"}'
+
+# Search documents in Elasticsearch
+curl http://localhost:8080/search?q=example
+```
+
+After making these API calls, you can:
+
+1. Open Jaeger UI at http://localhost:16686
+2. Select the service "testcontainers-demo"
+3. Click "Find Traces" to see the trace details
+4. You can see the complete request flow including database operations, Kafka messages, and Elasticsearch queries
+
 ## Local Development
 
 1. Start dependencies:
@@ -265,7 +389,7 @@ docker-compose up -d
 
 ```bash
 # Development
-CONFIG_PATH=configs/dev.yaml go run main.go
+CONFIG_PATH=configs/dev.yaml go run ./cmd/api/main.go
 
 # Test
 CONFIG_PATH=configs/test.yaml go test -v ./test/integration/...
@@ -364,7 +488,7 @@ make swagger    # Runs gen-swagger.sh to generate docs
 make serve-swagger   # Starts server with Swagger UI
 ```
 
-Then open http://localhost:8080/swagger/ in your browser.
+Then open http://localhost:8080/swagger/index.html in your browser.
 
 ### Documentation Scripts
 
@@ -519,3 +643,87 @@ Feel free to contribute examples for other databases or infrastructure component
 ## License
 
 MIT License
+
+## Usage
+
+### Users API
+
+```bash
+# Create a user
+curl -X POST http://localhost:8080/users \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "username": "johndoe",
+    "email": "john@example.com",
+    "full_name": "John Doe",
+    "password": "password123"
+  }'
+
+# Get user by ID
+curl http://localhost:8080/users/1
+
+# List all users
+curl http://localhost:8080/users
+```
+
+### Products API
+
+```bash
+# Create a new product
+curl -X POST http://localhost:8080/products \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 1,
+    "sku": "PROD-001",
+    "name": "Test Product",
+    "description": "A test product",
+    "price": 299.99,
+    "stock": 100
+  }'
+
+# Get all products
+curl http://localhost:8080/products
+```
+
+### Orders API
+
+```bash
+# Create a new order
+curl -X POST http://localhost:8080/orders \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "order-1",
+    "customer_id": "cust-1",
+    "status": "pending",
+    "total": 299.99,
+    "payment_method": "credit_card",
+    "items": [
+      {
+        "product_id": "prod-1",
+        "product_name": "Test Product",
+        "quantity": 1,
+        "unit_price": 299.99,
+        "subtotal": 299.99
+      }
+    ]
+  }'
+
+# Search orders
+curl -X GET http://localhost:8080/orders/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": {
+      "match": {
+        "customer_id": "cust-1"
+      }
+    }
+  }'
+
+# Simple search across all fields
+curl "http://localhost:8080/search?q=Test%20Product"
+```
+
+## References
+
+- [Testcontainers.com Getting started](https://testcontainers.com/getting-started/)
+- [testcontainers modules](https://golang.testcontainers.org/modules/)

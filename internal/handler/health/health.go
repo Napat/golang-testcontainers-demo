@@ -21,8 +21,8 @@ type HealthHandler struct {
 }
 
 type HealthStatus struct {
-	Status    string                 `json:"status"`
-	Timestamp time.Time             `json:"timestamp"`
+	Status    string                   `json:"status"`
+	Timestamp time.Time                `json:"timestamp"`
 	Services  map[string]ServiceStatus `json:"services"`
 }
 
@@ -42,6 +42,13 @@ func NewHealthHandler(mysqlDB, postgresDB *sql.DB, redisClient *redis.Client, ka
 	}
 }
 
+// @Summary Get health status
+// @Description Get the health status of all system components
+// @Tags health
+// @Accept json
+// @Produce json
+// @Success 200 {object} HealthStatus
+// @Router /health [get]
 func (h *HealthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)

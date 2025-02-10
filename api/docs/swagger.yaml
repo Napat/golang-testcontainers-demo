@@ -1,13 +1,71 @@
-basePath: /
+basePath: /api/v1
 definitions:
-  github_com_Napat_golang-testcontainers-demo_internal_model.Error:
+  github_com_Napat_golang-testcontainers-demo_pkg_errors.Error:
     properties:
       code:
         type: integer
       message:
         type: string
+      op:
+        description: Operation that failed
+        type: string
     type: object
-  github_com_Napat_golang-testcontainers-demo_internal_model.User:
+  github_com_Napat_golang-testcontainers-demo_pkg_model.Item:
+    properties:
+      product_id:
+        type: string
+      product_name:
+        type: string
+      quantity:
+        type: integer
+      subtotal:
+        type: number
+      unit_price:
+        type: number
+    type: object
+  github_com_Napat_golang-testcontainers-demo_pkg_model.Order:
+    properties:
+      created_at:
+        type: string
+      customer_id:
+        type: string
+      id:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Item'
+        type: array
+      payment_method:
+        type: string
+      status:
+        type: string
+      total:
+        type: number
+      updated_at:
+        type: string
+    type: object
+  github_com_Napat_golang-testcontainers-demo_pkg_model.Product:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      price:
+        type: number
+      sku:
+        type: string
+      stock:
+        type: integer
+      updated_at:
+        type: string
+      version:
+        type: integer
+    type: object
+  github_com_Napat_golang-testcontainers-demo_pkg_model.User:
     description: User account information
     properties:
       created_at:
@@ -21,7 +79,7 @@ definitions:
       password:
         type: string
       status:
-        type: string
+        $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.UserStatus'
       updated_at:
         type: string
       username:
@@ -29,7 +87,7 @@ definitions:
       version:
         type: integer
     type: object
-  github_com_Napat_golang-testcontainers-demo_internal_model.UserCreate:
+  github_com_Napat_golang-testcontainers-demo_pkg_model.UserCreate:
     description: User creation request body
     properties:
       email:
@@ -47,14 +105,319 @@ definitions:
     - password
     - username
     type: object
+  github_com_Napat_golang-testcontainers-demo_pkg_model.UserStatus:
+    enum:
+    - active
+    - inactive
+    - suspended
+    type: string
+    x-enum-varnames:
+    - StatusActive
+    - StatusInactive
+    - StatusSuspended
+  internal_handler.MessageRequest:
+    properties:
+      content:
+        type: string
+    type: object
+  internal_handler_health.HealthStatus:
+    properties:
+      services:
+        additionalProperties:
+          $ref: '#/definitions/internal_handler_health.ServiceStatus'
+        type: object
+      status:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  internal_handler_health.ServiceStatus:
+    properties:
+      latency:
+        type: string
+      message:
+        type: string
+      status:
+        type: string
+    type: object
 host: localhost:8080
 info:
-  contact: {}
-  description: API documentation for Testcontainers Demo project
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is a sample server using testcontainers.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
   title: Testcontainers Demo API
   version: "1.0"
 paths:
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Get the health status of all system components
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler_health.HealthStatus'
+      summary: Get health status
+      tags:
+      - health
+  /messages:
+    post:
+      consumes:
+      - application/json
+      description: Send a message to Kafka
+      parameters:
+      - description: Message content
+        in: body
+        name: message
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.MessageRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
+      summary: Send a message
+      tags:
+      - messages
+  /orders:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all orders
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Order'
+            type: array
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
+      summary: List all orders
+      tags:
+      - orders
+    post:
+      consumes:
+      - application/json
+      description: Create a new order with the given details
+      parameters:
+      - description: Order details
+        in: body
+        name: order
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Order'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Order'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
+      summary: Create a new order
+      tags:
+      - orders
+  /orders/search:
+    get:
+      consumes:
+      - application/json
+      description: Search orders using Elasticsearch query
+      parameters:
+      - description: Search query
+        in: body
+        name: query
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Order'
+            type: array
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
+      summary: Search orders
+      tags:
+      - orders
+  /orders/simple-search:
+    get:
+      consumes:
+      - application/json
+      description: Search orders using a simple query parameter
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Order'
+            type: array
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
+      summary: Simple search orders
+      tags:
+      - orders
+  /products:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all products
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Product'
+            type: array
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
+      summary: List all products
+      tags:
+      - products
+    post:
+      consumes:
+      - application/json
+      description: Create a new product with the provided details
+      parameters:
+      - description: Product details
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Product'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
+      summary: Create a new product
+      tags:
+      - products
+  /products/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get product details by ID
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Product'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
+      summary: Get product by ID
+      tags:
+      - products
   /users:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all users in the system
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.User'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
+      summary: Get all users
+      tags:
+      - users
     post:
       consumes:
       - application/json
@@ -65,22 +428,22 @@ paths:
         name: user
         required: true
         schema:
-          $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_internal_model.UserCreate'
+          $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.UserCreate'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_internal_model.User'
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.User'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_internal_model.Error'
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_internal_model.Error'
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
       summary: Create a new user
       tags:
       - users
@@ -101,23 +464,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_internal_model.User'
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.User'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_internal_model.Error'
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_internal_model.Error'
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
       summary: Get user by ID
       tags:
       - users
-schemes:
-- http
 securityDefinitions:
-  BearerAuth:
-    in: header
-    name: Authorization
-    type: apiKey
+  BasicAuth:
+    type: basic
 swagger: "2.0"

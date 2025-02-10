@@ -1,4 +1,4 @@
-// internal/model/product.go
+// pkg/model/product.go
 package model
 
 import (

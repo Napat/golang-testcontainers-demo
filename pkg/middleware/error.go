@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/Napat/golang-testcontainers-demo/internal/errors"
+	"github.com/Napat/golang-testcontainers-demo/pkg/errors"
 )
 
 type ErrorResponse struct {

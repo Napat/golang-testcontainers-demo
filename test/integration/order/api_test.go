@@ -12,15 +12,15 @@ import (
 	"time"
 
 	"github.com/Napat/golang-testcontainers-demo/internal/handler"
-	"github.com/Napat/golang-testcontainers-demo/internal/model"
-	"github.com/Napat/golang-testcontainers-demo/internal/repository/order"
+	"github.com/Napat/golang-testcontainers-demo/internal/repository/repository_order"
+	"github.com/Napat/golang-testcontainers-demo/pkg/model"
 	"github.com/Napat/golang-testcontainers-demo/test/integration"
 	"github.com/stretchr/testify/suite"
 )
 
 type OrderAPITestSuite struct {
 	integration.ElasticTestSuite
-	repo    *order.OrderRepository
+	repo    *repository_order.OrderRepository
 	handler http.Handler
 }
 
@@ -35,12 +35,13 @@ func TestOrderAPI(t *testing.T) {
 
 func (s *OrderAPITestSuite) SetupSuite() {
 	s.SetupElasticsearch()
-	s.repo = order.NewOrderRepository(s.ESClient)
+	s.repo = repository_order.NewOrderRepository(s.ESClient)
 
 	router := http.NewServeMux()
 	orderHandler := handler.NewOrderHandler(s.repo)
-	router.HandleFunc("/orders", orderHandler.ServeHTTP)
-	router.HandleFunc("/orders/search", orderHandler.ServeHTTP)
+	router.Handle("/orders", orderHandler)
+	router.Handle("/orders/search", orderHandler)
+	router.Handle("/orders/simple-search", orderHandler)
 	s.handler = router
 }
 
@@ -169,4 +170,46 @@ func (s *OrderAPITestSuite) TestSearchOrdersAPI() {
 	s.Require().NoError(err)
 	s.Require().Len(orders, 1)
 	s.Equal(order.ID, orders[0].ID)
+}
+
+func (s *OrderAPITestSuite) TestSimpleSearchAPI() {
+	// Create test order
+	order := model.Order{
+		ID:            "test-order-1",
+		CustomerID:    "cust-1",
+		Status:        "pending",
+		Total:         299.99,
+		PaymentMethod: "credit_card",
+		Items: []model.Item{
+			{
+				ProductID:   "prod-1",
+				ProductName: "Test Product",
+				Quantity:    1,
+				UnitPrice:   299.99,
+				Subtotal:    299.99,
+			},
+		},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	err := s.repo.CreateOrder(context.Background(), &order)
+	s.Require().NoError(err)
+
+	// Ensure the index is refreshed
+	_, err = s.ESClient.Indices.Refresh()
+	s.Require().NoError(err)
+
+	// Test simple search
+	req := httptest.NewRequest(http.MethodGet, "/orders/simple-search?q=cust-1", nil)
+	w := httptest.NewRecorder()
+	s.handler.ServeHTTP(w, req)
+
+	s.Equal(http.StatusOK, w.Code)
+
+	var response []model.Order
+	err = json.NewDecoder(w.Body).Decode(&response)
+	s.Require().NoError(err)
+	s.Require().Len(response, 1)
+	s.Equal("cust-1", response[0].CustomerID)
 }

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Napat/golang-testcontainers-demo/internal/model"
-	"github.com/Napat/golang-testcontainers-demo/internal/repository/product"
+	"github.com/Napat/golang-testcontainers-demo/internal/repository/repository_product"
+	"github.com/Napat/golang-testcontainers-demo/pkg/model"
 	"github.com/Napat/golang-testcontainers-demo/test/integration"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/suite"
@@ -21,9 +21,9 @@ import (
 type ProductRepositoryTestSuite struct {
 	integration.BaseTestSuite
 	container testcontainers.Container
-    ctx context.Context
+	ctx       context.Context
 	db        *sql.DB
-	repo      *product.ProductRepository
+	repo      *repository_product.ProductRepository
 }
 
 // TestProductRepository is a test suite for the ProductRepository type.
@@ -31,7 +31,7 @@ type ProductRepositoryTestSuite struct {
 // applies the necessary migration scripts, and tests the CRUD operations
 // of the ProductRepository.
 func TestProductRepository(t *testing.T) {
-    suite.Run(t, new(ProductRepositoryTestSuite))
+	suite.Run(t, new(ProductRepositoryTestSuite))
 }
 
 // SetupSuite prepares the test environment for the ProductRepositoryTestSuite.
@@ -48,51 +48,51 @@ func TestProductRepository(t *testing.T) {
 // The method doesn't take any parameters as it operates on the suite's fields.
 // It doesn't return any values, but it populates the suite's fields with the necessary objects for testing.
 func (s *ProductRepositoryTestSuite) SetupSuite() {
-    s.BaseTestSuite.SetupSuite()
-    s.ctx = context.Background()
+	s.BaseTestSuite.SetupSuite()
+	s.ctx = context.Background()
 
-    postgresContainer, err := postgres.Run(s.ctx,
-        "postgres:14-alpine",
-        postgres.WithInitScripts(filepath.Join("testdata", "000001_create_products_table.up.sql")),
-        postgres.WithDatabase("testdb"),
-        postgres.WithUsername("test"),
-        postgres.WithPassword("test"),
-        testcontainers.WithWaitStrategy(
-            wait.ForLog("database system is ready to accept connections").
-                WithOccurrence(2).WithStartupTimeout(5*time.Second),
-        ),
-    )
-    s.Require().NoError(err)
-    s.container = postgresContainer
+	postgresContainer, err := postgres.Run(s.ctx,
+		"postgres:14-alpine",
+		postgres.WithInitScripts(filepath.Join("testdata", "000001_create_products_table.up.sql")),
+		postgres.WithDatabase("testdb"),
+		postgres.WithUsername("test"),
+		postgres.WithPassword("test"),
+		testcontainers.WithWaitStrategy(
+			wait.ForLog("database system is ready to accept connections").
+				WithOccurrence(2).WithStartupTimeout(5*time.Second),
+		),
+	)
+	s.Require().NoError(err)
+	s.container = postgresContainer
 
-    host, err := postgresContainer.Host(s.ctx)
-    s.Require().NoError(err)
+	host, err := postgresContainer.Host(s.ctx)
+	s.Require().NoError(err)
 
-    mappedPort, err := postgresContainer.MappedPort(s.ctx, "5432/tcp")
-    s.Require().NoError(err)
+	mappedPort, err := postgresContainer.MappedPort(s.ctx, "5432/tcp")
+	s.Require().NoError(err)
 
-    dsn := fmt.Sprintf(
-        "postgres://test:test@%s:%s/testdb?sslmode=disable",
-        host,
-        mappedPort.Port(),
-    )
+	dsn := fmt.Sprintf(
+		"postgres://test:test@%s:%s/testdb?sslmode=disable",
+		host,
+		mappedPort.Port(),
+	)
 
-    // Add retry logic for database connection
-    var db *sql.DB
-    for i := 0; i < 5; i++ {
-        db, err = sql.Open("postgres", dsn)
-        if err != nil {
-            time.Sleep(time.Second)
-            continue
-        }
-        if err = db.Ping(); err == nil {
-            break
-        }
-        time.Sleep(time.Second)
-    }
-    s.Require().NoError(err)
-    s.db = db
-    s.repo = product.NewProductRepository(db)
+	// Add retry logic for database connection
+	var db *sql.DB
+	for i := 0; i < 5; i++ {
+		db, err = sql.Open("postgres", dsn)
+		if err != nil {
+			time.Sleep(time.Second)
+			continue
+		}
+		if err = db.Ping(); err == nil {
+			break
+		}
+		time.Sleep(time.Second)
+	}
+	s.Require().NoError(err)
+	s.db = db
+	s.repo = repository_product.NewProductRepository(db)
 }
 
 // TearDownSuite tears down the test environment for the ProductRepositoryTestSuite.

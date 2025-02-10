@@ -13,7 +13,7 @@ COVERAGE_FILE=coverage.out
 COVERAGE_HTML=coverage.html
 
 .PHONY: all
-all: test build
+all: swagger test build
 
 .PHONY: build
 build:
@@ -62,11 +62,11 @@ test-coverage:
 
 .PHONY: test-mysql
 test-mysql:
-	$(GOTEST) -v -cover -coverpkg=./internal/repository/user/... ./test/integration/user/...
+	$(GOTEST) -v -cover -coverpkg=./internal/repository/repository_user/... ./test/integration/user/...
 
 .PHONY: test-postgres
 test-postgres:
-	$(GOTEST) -v -cover -coverpkg=./internal/repository/product/... ./test/integration/product/...
+	$(GOTEST) -v -cover -coverpkg=./internal/repository/repository_product/... ./test/integration/product/...
 
 .PHONY: test-redis
 test-redis:
@@ -74,11 +74,11 @@ test-redis:
 
 .PHONY: test-kafka
 test-kafka:
-	$(GOTEST) -v -cover -coverpkg=./internal/repository/event/... ./test/integration/event/...
+	$(GOTEST) -v -cover -coverpkg=./internal/repository/repository_event/... ./test/integration/event/...
 
 .PHONY: test-elastic
 test-elastic:
-	$(GOTEST) -v -cover -coverpkg=./internal/repository/order/... ./test/integration/order/...
+	$(GOTEST) -v -cover -coverpkg=./internal/repository/repository_order/... ./test/integration/order/...
 
 # Coverage commands
 .PHONY: coverage

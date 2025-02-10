@@ -40,6 +40,15 @@ type Config struct {
 	Elasticsearch struct {
 		URL string `yaml:"url"`
 	} `yaml:"elasticsearch"`
+
+	Tracing TracingConfig `yaml:"tracing"`
+}
+
+type TracingConfig struct {
+	Enabled        bool    `yaml:"enabled"`
+	ServiceName    string  `yaml:"serviceName"`
+	CollectorURL   string  `yaml:"collectorUrl"`
+	SamplingRatio  float64 `yaml:"samplingRatio"`
 }
 
 func Load(path string) (*Config, error) {

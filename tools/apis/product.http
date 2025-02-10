@@ -1,0 +1,15 @@
+### Create a new product
+POST http://localhost:8080/products
+Content-Type: application/json
+
+{
+    "id": 2,
+    "sku": "PROD-002",
+    "name": "Test Product",
+    "description": "A test product",
+    "price": 299.99,
+    "stock": 100
+}
+
+### Get all products
+GET http://localhost:8080/products

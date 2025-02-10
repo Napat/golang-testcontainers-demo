@@ -53,9 +53,11 @@ func NewUser(username, email, password string) *User {
 	return &User{
 		Username:  username,
 		Email:     email,
-		Status:    StatusActive,
+		Password:  password,
+		Status:    StatusActive, // Explicitly set as StatusActive
 		CreatedAt: now,
 		UpdatedAt: now,
+		Version:   1,
 	}
 }
 

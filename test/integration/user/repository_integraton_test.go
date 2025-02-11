@@ -10,6 +10,7 @@ import (
 
 	"github.com/Napat/golang-testcontainers-demo/internal/repository/repository_user"
 	"github.com/Napat/golang-testcontainers-demo/pkg/model"
+	"github.com/Napat/golang-testcontainers-demo/pkg/testhelper"
 	"github.com/Napat/golang-testcontainers-demo/test/integration"
 	_ "github.com/go-sql-driver/mysql" // Add MySQL driver
 	"github.com/stretchr/testify/suite"
@@ -25,7 +26,7 @@ type UserRepositoryTestSuite struct {
 	repo      *repository_user.UserRepository
 }
 
-// TestUserRepository runs the UserRepositoryTestSuite.
+// TestIntegrationUserRepository runs the UserRepositoryTestSuite.
 //
 // This function sets up a test environment for testing the UserRepository type.
 // It starts a MySQL container using testcontainers, sets up the database,
@@ -33,7 +34,8 @@ type UserRepositoryTestSuite struct {
 //
 // The function doesn't take any parameters as it operates on the suite's fields.
 // It doesn't return any values, but it populates the suite's fields with the necessary objects for testing.
-func TestUserRepository(t *testing.T) {
+func TestIntegrationUserRepository(t *testing.T) {
+	testhelper.SkipIfShort(t)
 	suite.Run(t, new(UserRepositoryTestSuite))
 }
 

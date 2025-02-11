@@ -1,21 +1,27 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"github.com/Napat/golang-testcontainers-demo/internal/repository/repository_product"
 	"github.com/Napat/golang-testcontainers-demo/pkg/errors"
 	"github.com/Napat/golang-testcontainers-demo/pkg/model"
 )
 
-type ProductHandler struct {
-	productRepo *repository_product.ProductRepository
+type ProductRepository interface {
+	Create(ctx context.Context, product *model.Product) error
+	GetByID(ctx context.Context, id int64) (*model.Product, error)
+	List(ctx context.Context) ([]*model.Product, error)
 }
 
-func NewProductHandler(productRepo *repository_product.ProductRepository) *ProductHandler {
+type ProductHandler struct {
+	productRepo ProductRepository
+}
+
+func NewProductHandler(productRepo ProductRepository) *ProductHandler {
 	return &ProductHandler{
 		productRepo: productRepo,
 	}

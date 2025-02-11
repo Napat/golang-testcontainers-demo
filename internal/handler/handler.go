@@ -2,12 +2,6 @@ package handler
 
 import (
 	"net/http"
-
-	"github.com/Napat/golang-testcontainers-demo/internal/repository/repository_cache"
-	"github.com/Napat/golang-testcontainers-demo/internal/repository/repository_event"
-	"github.com/Napat/golang-testcontainers-demo/internal/repository/repository_order"
-	"github.com/Napat/golang-testcontainers-demo/internal/repository/repository_product"
-	"github.com/Napat/golang-testcontainers-demo/internal/repository/repository_user"
 )
 
 // Handler holds all HTTP handlers
@@ -20,11 +14,11 @@ type Handler struct {
 
 // New creates a new Handler
 func New(
-	userRepo *repository_user.UserRepository,
-	productRepo *repository_product.ProductRepository,
-	orderRepo *repository_order.OrderRepository,
-	producer *repository_event.ProducerRepository,
-	cache *repository_cache.CacheRepository,
+	userRepo UserRepository,
+	productRepo ProductRepository,
+	orderRepo OrderRepository,
+	producer MessageProducer,
+	cache CacheRepository,
 ) *Handler {
 	return &Handler{
 		userHandler:    NewUserHandler(userRepo, cache, producer),

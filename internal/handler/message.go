@@ -4,12 +4,15 @@ import (
 	"encoding/json"
 	"net/http"
 
-	repository_event "github.com/Napat/golang-testcontainers-demo/internal/repository/repository_event"
 	"github.com/Napat/golang-testcontainers-demo/pkg/errors"
 )
 
+type MessageProducer interface {
+	SendMessage(topic string, message interface{}) error
+}
+
 type MessageHandler struct {
-	producer *repository_event.ProducerRepository
+	producer MessageProducer
 }
 
 // MessageRequest represents the message request body
@@ -27,7 +30,7 @@ type MessageRequest struct {
 // @Failure 400 {object} errors.Error "Bad Request"
 // @Failure 500 {object} errors.Error "Internal Server Error"
 // @Router /messages [post]
-func NewMessageHandler(producer *repository_event.ProducerRepository) *MessageHandler {
+func NewMessageHandler(producer MessageProducer) *MessageHandler {
 	return &MessageHandler{producer: producer}
 }
 

@@ -78,6 +78,8 @@ definitions:
         type: integer
       password:
         type: string
+      row_number:
+        type: integer
       status:
         $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.UserStatus'
       updated_at:
@@ -412,9 +414,11 @@ paths:
               $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.User'
             type: array
         "500":
-          description: Internal Server Error
+          description: Error response
           schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
+            additionalProperties:
+              type: string
+            type: object
       summary: Get all users
       tags:
       - users
@@ -437,13 +441,17 @@ paths:
           schema:
             $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.User'
         "400":
-          description: Bad Request
+          description: Error response
           schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
+            additionalProperties:
+              type: string
+            type: object
         "500":
-          description: Internal Server Error
+          description: Error response
           schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
+            additionalProperties:
+              type: string
+            type: object
       summary: Create a new user
       tags:
       - users
@@ -466,13 +474,17 @@ paths:
           schema:
             $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.User'
         "404":
-          description: Not Found
+          description: Error response
           schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
+            additionalProperties:
+              type: string
+            type: object
         "500":
-          description: Internal Server Error
+          description: Error response
           schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
+            additionalProperties:
+              type: string
+            type: object
       summary: Get user by ID
       tags:
       - users

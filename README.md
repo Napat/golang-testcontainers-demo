@@ -24,6 +24,9 @@ Before running the tests, it's recommended to pull the required Docker images fi
 
 ```sh
 # Pull required Docker images
+make pull-images
+
+# "make pull-images" is equivalent to:
 docker pull mysql:8
 docker pull postgres:14-alpine
 docker pull redis:6
@@ -50,30 +53,30 @@ Run all integration tests with coverage:
 
 ```sh
 # Test all packages and show coverage
-go test -v -cover -coverpkg=./internal/... ./test/integration/...
+go test -v -short -cover -coverpkg=./internal/... ./test/integration/...
 
-# Generate HTML coverage report
-go test -v -cover -coverprofile=coverage.out -coverpkg=./internal/... ./test/integration/...
+# Test all packages and generate HTML coverage report
+go test -v -short -cover -coverprofile=coverage.out -coverpkg=./internal/... ./test/integration/...
 go tool cover -html=coverage.out
 ```
 
-Run specific tests:
+Run specific tests
 
 ```sh
-# MySQL tests - User Repository
-go test -v -cover -coverpkg=./internal/repository/repository_user/... ./test/integration/user/...
+# MySQL integration tests - User Repository
+go test -v -run Integration -short -cover -coverpkg=./internal/repository/repository_user/... ./test/integration/user/...
 
-# PostgreSQL tests - Product Repository
-go test -v -cover -coverpkg=./internal/repository/repository_product/... ./test/integration/product/...
+# PostgreSQL integration tests - Product Repository
+go test -v -run Integration -short -cover -coverpkg=./internal/repository/repository_product/... ./test/integration/product/...
 
-# Redis tests - Cache Repository
-go test -v -cover -coverpkg=./internal/repository/cache/... ./test/integration/cache/...
+# Redis integration tests - Cache Repository
+go test -v -run Integration -short -cover -coverpkg=./internal/repository/cache/... ./test/integration/cache/...
 
-# Kafka tests - Event Producer Repository
-go test -v -cover -coverpkg=./internal/repository/repository_event/... ./test/integration/event/...
+# Kafka integration tests - Event Producer Repository
+go test -v -run Integration -short -cover -coverpkg=./internal/repository/repository_event/... ./test/integration/event/...
 
-# ElasticSearch tests - Order Repository and API
-go test -v -cover -coverpkg=./internal/repository/repository_order/...,./internal/handler/... ./test/integration/order/...
+# ElasticSearch integration tests - Order Repository and API
+go test -v -run Integration -short -cover -coverpkg=./internal/repository/repository_order/...,./internal/handler/... ./test/integration/order/...
 ```
 
 ## Test Coverage

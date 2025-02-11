@@ -1,20 +1,25 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
-	"github.com/Napat/golang-testcontainers-demo/internal/repository/repository_order"
 	"github.com/Napat/golang-testcontainers-demo/pkg/errors"
 	"github.com/Napat/golang-testcontainers-demo/pkg/middleware"
 	"github.com/Napat/golang-testcontainers-demo/pkg/model"
 )
 
-type OrderHandler struct {
-	repo *repository_order.OrderRepository
+type OrderRepository interface {
+	CreateOrder(ctx context.Context, order *model.Order) error
+	SearchOrders(ctx context.Context, query map[string]interface{}) ([]model.Order, error)
 }
 
-func NewOrderHandler(repo *repository_order.OrderRepository) *OrderHandler {
+type OrderHandler struct {
+	repo OrderRepository
+}
+
+func NewOrderHandler(repo OrderRepository) *OrderHandler {
 	return &OrderHandler{repo: repo}
 }
 

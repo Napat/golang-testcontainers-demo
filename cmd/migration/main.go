@@ -19,11 +19,11 @@ import (
 
 func main() {
 	var (
-		target    = flag.String("target", "all", "Target datastore (mysql, postgres, redis, elasticsearch, all)")
-		command   = flag.String("command", "up", "Migration command (up, down, version)")
-		mysqlDSN  = flag.String("mysql-dsn", "root:password@tcp(localhost:3306)/testdb?multiStatements=true", "MySQL DSN")
-		postDSN   = flag.String("postgres-dsn", "postgres://postgres:password@localhost:5432/testdb?sslmode=disable", "PostgreSQL DSN")
-		redisDSN  = flag.String("redis-dsn", "redis://localhost:6379/0", "Redis DSN")
+		target     = flag.String("target", "all", "Target datastore (mysql, postgres, redis, elasticsearch, all)")
+		command    = flag.String("command", "up", "Migration command (up, down, version)")
+		mysqlDSN   = flag.String("mysql-dsn", "root:password@tcp(localhost:3306)/testdb?multiStatements=true", "MySQL DSN")
+		postDSN    = flag.String("postgres-dsn", "postgresql://postgres:password@localhost:5432/testdb?sslmode=disable", "PostgreSQL DSN")
+		redisDSN   = flag.String("redis-dsn", "redis://localhost:6379/0", "Redis DSN")
 		elasticURL = flag.String("elastic-url", "http://localhost:9200", "Elasticsearch URL")
 	)
 	flag.Parse()
@@ -64,7 +64,7 @@ func runMySQLMigration(dsn, command string) {
 func runPostgresMigration(dsn, command string) {
 	m, err := migrate.New(
 		"file://test/integration/product/testdata",
-		fmt.Sprintf("postgres://%s", dsn),
+		fmt.Sprintf("postgres://%s", strings.TrimPrefix(dsn, "postgresql://")), // Fix DSN format
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -75,7 +75,7 @@ func runPostgresMigration(dsn, command string) {
 
 func runRedisInit(ctx context.Context, dsn string) {
 	opts, err := redis.ParseURL(dsn)
-	if (err != nil) {
+	if err != nil {
 		log.Fatal(err)
 	}
 
@@ -95,13 +95,13 @@ func runRedisInit(ctx context.Context, dsn string) {
 			continue
 		}
 		args := strings.Fields(cmd)
-		
+
 		// Convert []string to []interface{}
 		cmdArgs := make([]interface{}, len(args))
 		for i, v := range args {
 			cmdArgs[i] = v
 		}
-		
+
 		if err := rdb.Do(ctx, cmdArgs...).Err(); err != nil {
 			log.Printf("Error executing Redis command %q: %v", cmd, err)
 		}

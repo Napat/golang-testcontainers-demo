@@ -418,9 +418,12 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Error response",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -456,15 +459,21 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Error response",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Error response",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -500,15 +509,21 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "Error response",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Error response",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -633,6 +648,9 @@ const docTemplate = `{
                 },
                 "password": {
                     "type": "string"
+                },
+                "row_number": {
+                    "type": "integer"
                 },
                 "status": {
                     "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.UserStatus"

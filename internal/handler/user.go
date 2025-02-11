@@ -1,30 +1,49 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
-	repository_cache "github.com/Napat/golang-testcontainers-demo/internal/repository/repository_cache"
-	repository_event "github.com/Napat/golang-testcontainers-demo/internal/repository/repository_event"
 	repository_user "github.com/Napat/golang-testcontainers-demo/internal/repository/repository_user"
-	"github.com/Napat/golang-testcontainers-demo/pkg/errors"
 	"github.com/Napat/golang-testcontainers-demo/pkg/model"
+	"github.com/google/uuid"
 )
 
-type UserHandler struct {
-	userRepo *repository_user.UserRepository
-	cache    *repository_cache.CacheRepository
-	producer *repository_event.ProducerRepository
+type UserRepository interface {
+	Create(ctx context.Context, user *model.User) error
+	GetByID(ctx context.Context, id uuid.UUID) (*model.User, error)
+	GetAll(ctx context.Context) ([]*model.User, error)
 }
 
-func NewUserHandler(userRepo *repository_user.UserRepository,
-	cache *repository_cache.CacheRepository,
-	producer *repository_event.ProducerRepository) *UserHandler {
+type CacheRepository interface {
+	Get(ctx context.Context, key string, value interface{}) error
+	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error
+}
+
+type UserHandler struct {
+	userRepo UserRepository
+	cache    CacheRepository
+	producer MessageProducer
+}
+
+func respondWithError(w http.ResponseWriter, code int, message string, source string) {
+	response := map[string]string{
+		"error":  message,
+		"source": source,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(response)
+}
+
+func NewUserHandler(userRepo UserRepository,
+	cache CacheRepository,
+	producer MessageProducer) *UserHandler {
 	return &UserHandler{
 		userRepo: userRepo,
 		cache:    cache,
@@ -45,9 +64,9 @@ func (h *UserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.Method == http.MethodGet && path == "/users":
 		h.getAllUsers(w, r)
 	case r.Method == http.MethodGet && len(parts) == 3 && parts[1] == "users":
-		id, err := strconv.ParseInt(parts[2], 10, 64)
+		id, err := uuid.Parse(parts[2])
 		if err != nil {
-			http.Error(w, "Invalid user ID", http.StatusBadRequest)
+			http.Error(w, "Invalid user ID format", http.StatusBadRequest)
 			return
 		}
 		h.getUserByID(w, r, id)
@@ -63,27 +82,26 @@ func (h *UserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param user body model.UserCreate true "User creation request"
 // @Success 201 {object} model.User
-// @Failure 400 {object} errors.Error
-// @Failure 500 {object} errors.Error
+// @Failure 400 {object} map[string]string "Error response"
+// @Failure 500 {object} map[string]string "Error response"
 // @Router /users [post]
 func (h *UserHandler) createUser(w http.ResponseWriter, r *http.Request) {
-	var req model.UserCreate
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		json.NewEncoder(w).Encode(errors.NewBadRequest("createUser", "Invalid request body"))
+	ctx := r.Context()
+	var user model.User
+
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request payload", "createUser")
 		return
 	}
 
-	user := &model.User{
-		Username: req.Username,
-		Email:    req.Email,
-		FullName: req.FullName,
-		Password: req.Password,
-		Status:   model.StatusActive,
-		Version:  1,
-	}
+	// Generate and log new UUIDv7
+	user.ID = uuid.Must(uuid.NewV7())
+	log.Printf("Generated UUIDv7 for new user: %s", user.ID)
 
-	if err := h.userRepo.Create(r.Context(), user); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if err := h.userRepo.Create(ctx, &user); err != nil {
+		log.Printf("Error creating user: %v", err)
+		// ระบุ error message ที่ชัดเจนขึ้น
+		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to create user: %v", err), "createUser")
 		return
 	}
 
@@ -109,14 +127,14 @@ func (h *UserHandler) createUser(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param id path int true "User ID"
 // @Success 200 {object} model.User
-// @Failure 404 {object} errors.Error
-// @Failure 500 {object} errors.Error
+// @Failure 404 {object} map[string]string "Error response"
+// @Failure 500 {object} map[string]string "Error response"
 // @Router /users/{id} [get]
-func (h *UserHandler) getUserByID(w http.ResponseWriter, r *http.Request, id int64) {
+func (h *UserHandler) getUserByID(w http.ResponseWriter, r *http.Request, id uuid.UUID) {
 	ctx := r.Context()
 
 	// Try to get from cache first
-	cacheKey := fmt.Sprintf("user:%d", id)
+	cacheKey := fmt.Sprintf("user:%s", id)
 	var user *model.User
 	err := h.cache.Get(ctx, cacheKey, &user)
 	if err == nil {
@@ -149,7 +167,7 @@ func (h *UserHandler) getUserByID(w http.ResponseWriter, r *http.Request, id int
 // @Accept json
 // @Produce json
 // @Success 200 {array} model.User
-// @Failure 500 {object} errors.Error
+// @Failure 500 {object} map[string]string "Error response"
 // @Router /users [get]
 func (h *UserHandler) getAllUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := h.userRepo.GetAll(r.Context())

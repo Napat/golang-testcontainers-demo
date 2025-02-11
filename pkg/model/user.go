@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type UserStatus string
@@ -19,7 +21,8 @@ const (
 // User represents a user in the system
 // @Description User account information
 type User struct {
-	ID        int64      `json:"id" db:"id"`
+	ID        uuid.UUID  `json:"id" db:"id"`
+	RowNumber int        `json:"row_number,omitempty" db:"-"`
 	Username  string     `json:"username" db:"username"`
 	Email     string     `json:"email" db:"email"`
 	FullName  string     `json:"full_name" db:"full_name"`
@@ -51,6 +54,7 @@ type UserUpdate struct {
 func NewUser(username, email, password string) *User {
 	now := time.Now()
 	return &User{
+		ID:        uuid.Must(uuid.NewV7()),
 		Username:  username,
 		Email:     email,
 		Password:  password,

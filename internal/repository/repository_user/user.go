@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/Napat/golang-testcontainers-demo/pkg/model"
+	"github.com/google/uuid"
 )
 
 var ErrUserNotFound = errors.New("user not found")
@@ -23,8 +25,45 @@ func (r *UserRepository) Create(ctx context.Context, user *model.User) error {
 		user.Status = model.StatusActive
 	}
 
+	// Generate UUIDv7 if not set
+	if user.ID == uuid.Nil {
+		user.ID = uuid.Must(uuid.NewV7())
+	}
+
+	// Start a transaction
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	// Defer a rollback in case anything fails
+	defer tx.Rollback()
+
+	// Check for existing username and email within the transaction
+	var exists int
+	err = tx.QueryRowContext(ctx,
+		"SELECT COUNT(*) FROM users WHERE username = ? OR email = ? FOR UPDATE",
+		user.Username, user.Email).Scan(&exists)
+	if err != nil {
+		return fmt.Errorf("failed to check username/email existence: %w", err)
+	}
+	if exists > 0 {
+		// Check which one is duplicate
+		var existingUser model.User
+		err = tx.QueryRowContext(ctx,
+			"SELECT username, email FROM users WHERE username = ? OR email = ?",
+			user.Username, user.Email).Scan(&existingUser.Username, &existingUser.Email)
+		if err != nil && err != sql.ErrNoRows {
+			return err
+		}
+		if existingUser.Username == user.Username {
+			return fmt.Errorf("Error 1062 (23000): Duplicate entry '%s' for key 'users.username'", user.Username)
+		}
+		return fmt.Errorf("Error 1062 (23000): Duplicate entry '%s' for key 'users.email'", user.Email)
+	}
+
 	query := `
         INSERT INTO users (
+            id,
             username,
             email,
             full_name,
@@ -33,30 +72,30 @@ func (r *UserRepository) Create(ctx context.Context, user *model.User) error {
             version,
             created_at,
             updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())`
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`
 
-	result, err := r.db.ExecContext(ctx, query,
+	_, err = tx.ExecContext(ctx, query,
+		user.ID,
 		user.Username,
 		user.Email,
 		user.FullName,
 		user.Password,
-		string(user.Status), // Convert UserStatus to string
-		1,                   // Initial version
+		string(user.Status),
+		1,
 	)
 	if err != nil {
 		return err
 	}
 
-	id, err := result.LastInsertId()
-	if err != nil {
+	// If everything went well, commit the transaction
+	if err = tx.Commit(); err != nil {
 		return err
 	}
 
-	user.ID = id
 	return nil
 }
 
-func (r *UserRepository) GetByID(ctx context.Context, id int64) (*model.User, error) {
+func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
 	user := &model.User{}
 
 	query := `
@@ -97,6 +136,7 @@ func (r *UserRepository) GetByID(ctx context.Context, id int64) (*model.User, er
 func (r *UserRepository) GetAll(ctx context.Context) ([]*model.User, error) {
 	query := `
         SELECT
+            ROW_NUMBER() OVER (ORDER BY id) as row_num,
             id,
             username,
             email,
@@ -119,6 +159,7 @@ func (r *UserRepository) GetAll(ctx context.Context) ([]*model.User, error) {
 	for rows.Next() {
 		user := &model.User{}
 		err := rows.Scan(
+			&user.RowNumber,
 			&user.ID,
 			&user.Username,
 			&user.Email,

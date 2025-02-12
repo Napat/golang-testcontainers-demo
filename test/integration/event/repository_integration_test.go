@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/google/uuid"
+
 	"github.com/IBM/sarama"
 	"github.com/Napat/golang-testcontainers-demo/internal/repository/repository_event"
 	"github.com/Napat/golang-testcontainers-demo/pkg/model"
@@ -131,16 +133,16 @@ func (s *ProducerTestSuite) TearDownSuite() {
 // TestSendMessage tests the SendMessage method of the ProducerRepository.
 //
 // The test creates a sample User instance and uses SendMessage to send it as a message to the Kafka topic.
-// Then, it verifies that the message is sent successfully without any errors.
 func (s *ProducerTestSuite) TestSendMessage() {
 	// Test data
+	uuidV7 := uuid.Must(uuid.NewV7())
 	user := &model.User{
-		ID:       1,
+		ID:       uuidV7,
 		Username: "testuser",
 		Email:    "test@example.com",
 	}
 
 	// Test sending message
-	err := s.repo.SendMessage("user-1", user)
+	err := s.repo.SendMessage(uuidV7.String(), user)
 	s.Require().NoError(err)
 }

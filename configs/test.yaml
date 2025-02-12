@@ -2,6 +2,9 @@ environment: test
 
 server:
     port: 8081
+    read_timeout: 15
+    write_timeout: 15
+    idle_timeout: 60
 
 mysql:
     host: localhost
@@ -20,6 +23,7 @@ postgresql:
 redis:
     host: localhost
     port: 6380
+    pool_size: 5     # smaller pool size for testing
 
 kafka:
     brokers:

@@ -11,6 +11,8 @@ import (
 	"github.com/Napat/golang-testcontainers-demo/pkg/testhelper"
 	"github.com/Napat/golang-testcontainers-demo/test/integration"
 	"github.com/go-redis/redis/v8"
+	"github.com/google/uuid"
+
 	"github.com/stretchr/testify/suite"
 	"github.com/testcontainers/testcontainers-go"
 	tcRedis "github.com/testcontainers/testcontainers-go/modules/redis"
@@ -115,8 +117,9 @@ func (s *CacheRepositoryTestSuite) TestSetAndGet() {
 	ctx := context.Background()
 
 	// Test data
+	uuidV7 := uuid.Must(uuid.NewV7())
 	user := &model.User{
-		ID:       1,
+		ID:       uuidV7,
 		Username: "testuser",
 		Email:    "test@example.com",
 	}

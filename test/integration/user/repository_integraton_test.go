@@ -45,7 +45,7 @@ func (s *UserRepositoryTestSuite) SetupSuite() {
 
 	mysqlContainer, err := mysql.Run(ctx,
 		"mysql:8",
-		mysql.WithScripts(filepath.Join("testdata", "000001_create_users_table.up.sql")),
+		mysql.WithScripts(filepath.Join("testdata", "000002_alter_users_uuid.up.sql")),
 		mysql.WithDatabase("testdb"),
 		mysql.WithUsername("test"),
 		mysql.WithPassword("test"),

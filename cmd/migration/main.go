@@ -142,8 +142,31 @@ func runElasticsearchInit(ctx context.Context, url string) {
 	}
 }
 
+// validateMigration ตรวจสอบสถานะของ migration และรายงานปัญหาที่พบ
+func validateMigration(m *migrate.Migrate) error {
+	version, dirty, err := m.Version()
+	if err != nil && err != migrate.ErrNilVersion {
+		return fmt.Errorf("error checking migration version: %w", err)
+	}
+
+	if dirty {
+		return fmt.Errorf("database is in dirty state at version %d", version)
+	}
+
+	return nil
+}
+
 func executeMigration(m *migrate.Migrate, command string) {
 	var err error
+
+	// ตรวจสอบสถานะก่อนทำ migration
+	if err := validateMigration(m); err != nil {
+		if command != "force" {
+			log.Printf("Warning: %v", err)
+			log.Println("You may need to use 'force' command to fix this")
+		}
+	}
+
 	switch command {
 	case "up":
 		err = m.Up()
@@ -157,11 +180,28 @@ func executeMigration(m *migrate.Migrate, command string) {
 			log.Printf("Current version: %d (dirty: %v)", version, dirty)
 			return
 		}
+	case "force":
+		version, dirty, verErr := m.Version()
+		if verErr != nil {
+			err = verErr
+		} else {
+			targetVersion := int(version)
+			if dirty {
+				targetVersion-- // ถ้า dirty ให้ถอยกลับ 1 version
+			}
+			log.Printf("Forcing migration to version %d", targetVersion)
+			err = m.Force(targetVersion)
+		}
 	default:
 		log.Fatalf("Unknown command: %s", command)
 	}
 
 	if err != nil && err != migrate.ErrNoChange {
 		log.Fatal(err)
+	}
+
+	// ตรวจสอบสถานะหลังทำ migration
+	if err := validateMigration(m); err != nil {
+		log.Printf("Warning: Migration might not be in a clean state: %v", err)
 	}
 }

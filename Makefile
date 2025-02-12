@@ -9,6 +9,11 @@ GORUN=$(GOCMD) run
 GOTEST=$(GOCMD) test
 BINARY_NAME=testcontainers-demo
 
+# Build information
+BUILD_TIME=$(shell date +%FT%T%z)
+GIT_COMMIT=$(shell git rev-parse --short HEAD)
+LDFLAGS=-ldflags "-X main.buildTime=${BUILD_TIME} -X main.gitCommitSHA=${GIT_COMMIT}"
+
 # Docker parameters
 DOCKER_COMPOSE=docker compose
 
@@ -20,10 +25,16 @@ COVERAGE_HTML=coverage.html
 .PHONY: all
 all: swagger atest build
 
+## version: Show version information
+.PHONY: version
+version:
+	@echo "Build Time: ${BUILD_TIME}"
+	@echo "Git Commit: ${GIT_COMMIT}"
+
 ## build: Build the application binary
 .PHONY: build
 build:
-	$(GOBUILD) -o bin/$(BINARY_NAME) ./cmd/api
+	$(GOBUILD) $(LDFLAGS) -o bin/$(BINARY_NAME) ./cmd/api
 
 ## run: Run the application
 .PHONY: run

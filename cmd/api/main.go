@@ -449,22 +449,22 @@ func getDependencyVersions() map[string]string {
 
 // printVersionInfo แสดงข้อมูลเวอร์ชันและการ build
 func printVersionInfo() {
-	versions := getDependencyVersions()
+    versions := getDependencyVersions()
 
-	log.Printf("\n📦 Build Information:")
-	log.Printf("   ├── Version: %s", getAppVersion())
-	if buildTime != "" {
-		log.Printf("   ├── Build Time: %s", buildTime)
-	}
-	if gitCommitSHA != "" {
-		log.Printf("   ├── Git Commit: %s", gitCommitSHA)
-	}
-	log.Printf("   └── Dependencies:")
-	log.Printf("       ├── MySQL Driver: %s", versions["mysql"])
-	log.Printf("       ├── PostgreSQL Driver: %s", versions["postgres"])
-	log.Printf("       ├── Redis Client: %s", versions["redis"])
-	log.Printf("       ├── Kafka Client: %s", versions["kafka"])
-	log.Printf("       └── Elasticsearch Client: %s", versions["elasticsearch"])
+    log.Printf("\n📦 Build Information:")
+    if buildTime != "" {
+        log.Printf("   ├── Build Time: %s", buildTime)
+    }
+    if gitCommitSHA != "" {
+        log.Printf("   ├── Git Commit: %s", gitCommitSHA)
+    }
+    log.Printf("   ├── Version: %s", getAppVersion())
+    log.Printf("   └── Dependencies:")
+    log.Printf("       ├── MySQL Driver: %s", versions["mysql"])
+    log.Printf("       ├── PostgreSQL Driver: %s", versions["postgres"])
+    log.Printf("       ├── Redis Client: %s", versions["redis"])
+    log.Printf("       ├── Kafka Client: %s", versions["kafka"])
+    log.Printf("       └── Elasticsearch Client: %s", versions["elasticsearch"])
 }
 
 // printActiveConfiguration แสดงการตั้งค่าที่ใช้งานอยู่
@@ -511,7 +511,7 @@ func main() {
 
 	// Print initial information
 	printEnvironmentInfo(configPath, cfg)
-	printVersionInfo() // Add version information display
+	printVersionInfo() // แสดง version info ก่อน
 
 	log.Printf("\n🔌 Services Status:")
 

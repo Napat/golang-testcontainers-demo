@@ -117,11 +117,6 @@ definitions:
     - StatusActive
     - StatusInactive
     - StatusSuspended
-  internal_handler.MessageRequest:
-    properties:
-      content:
-        type: string
-    type: object
   internal_handler_health.HealthStatus:
     properties:
       services:
@@ -156,78 +151,39 @@ info:
   title: Testcontainers Demo API
   version: "1.0"
 paths:
-  /health:
-    get:
-      consumes:
-      - application/json
-      description: Get the health status of all system components
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/internal_handler_health.HealthStatus'
-      summary: Get health status
-      tags:
-      - health
-  /messages:
+  /api/v1/messages:
     post:
       consumes:
       - application/json
-      description: Send a message to Kafka
+      description: Send a message to the message broker
       parameters:
       - description: Message content
         in: body
         name: message
         required: true
         schema:
-          $ref: '#/definitions/internal_handler.MessageRequest'
+          additionalProperties:
+            type: string
+          type: object
       produces:
       - application/json
       responses:
         "202":
           description: Accepted
-        "400":
-          description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
+            additionalProperties:
+              type: string
+            type: object
       summary: Send a message
       tags:
       - messages
-  /orders:
-    get:
-      consumes:
-      - application/json
-      description: Get a list of all orders
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Order'
-            type: array
-        "204":
-          description: No Content
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
-      summary: List all orders
-      tags:
-      - orders
+  /api/v1/orders:
     post:
       consumes:
       - application/json
-      description: Create a new order with the given details
+      description: Create a new order in the system
       parameters:
-      - description: Order details
+      - description: Order object
         in: body
         name: order
         required: true
@@ -243,26 +199,22 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
+            additionalProperties:
+              type: string
+            type: object
       summary: Create a new order
       tags:
       - orders
-  /orders/search:
+  /api/v1/orders/search:
     get:
       consumes:
       - application/json
-      description: Search orders using Elasticsearch query
+      description: Search orders using customer ID
       parameters:
-      - description: Search query
-        in: body
-        name: query
-        required: true
-        schema:
-          type: object
+      - description: Customer ID to search for
+        in: query
+        name: customer_id
+        type: string
       produces:
       - application/json
       responses:
@@ -272,24 +224,14 @@ paths:
             items:
               $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Order'
             type: array
-        "204":
-          description: No Content
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
       summary: Search orders
       tags:
       - orders
-  /orders/simple-search:
+  /api/v1/orders/simple-search:
     get:
       consumes:
       - application/json
-      description: Search orders using a simple query parameter
+      description: Search orders using a simple query string
       parameters:
       - description: Search query
         in: query
@@ -305,20 +247,10 @@ paths:
             items:
               $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Order'
             type: array
-        "204":
-          description: No Content
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
       summary: Simple search orders
       tags:
       - orders
-  /products:
+  /api/v1/products:
     get:
       consumes:
       - application/json
@@ -332,21 +264,15 @@ paths:
             items:
               $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Product'
             type: array
-        "204":
-          description: No Content
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
-      summary: List all products
+      summary: Get all products
       tags:
       - products
     post:
       consumes:
       - application/json
-      description: Create a new product with the provided details
+      description: Create a new product in the system
       parameters:
-      - description: Product details
+      - description: Product object
         in: body
         name: product
         required: true
@@ -359,22 +285,14 @@ paths:
           description: Created
           schema:
             $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Product'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
       summary: Create a new product
       tags:
       - products
-  /products/{id}:
+  /api/v1/products/{id}:
     get:
       consumes:
       - application/json
-      description: Get product details by ID
+      description: Get a product by its ID
       parameters:
       - description: Product ID
         in: path
@@ -388,18 +306,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Product'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
       summary: Get product by ID
       tags:
       - products
-  /users:
+  /api/v1/users:
     get:
       consumes:
       - application/json
@@ -455,7 +365,7 @@ paths:
       summary: Create a new user
       tags:
       - users
-  /users/{id}:
+  /api/v1/users/{id}:
     get:
       consumes:
       - application/json
@@ -465,7 +375,7 @@ paths:
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       produces:
       - application/json
       responses:
@@ -488,6 +398,44 @@ paths:
       summary: Get user by ID
       tags:
       - users
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Get the health status of all system components
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler_health.HealthStatus'
+      summary: Get health status
+      tags:
+      - health
+  /orders:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all orders
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Order'
+            type: array
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error'
+      summary: List all orders
+      tags:
+      - orders
 securityDefinitions:
   BasicAuth:
     type: basic

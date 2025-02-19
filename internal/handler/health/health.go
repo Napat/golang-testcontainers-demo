@@ -42,6 +42,57 @@ func NewHealthHandler(mysqlDB, postgresDB *sql.DB, redisClient *redis.Client, ka
 	}
 }
 
+// RegisterRoutes registers all health check endpoints
+func (h *HealthHandler) RegisterRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("/health", h.handleHealth)
+	mux.HandleFunc("/health/live", h.handleLive)
+	mux.HandleFunc("/health/ready", h.handleReady)
+}
+
+func (h *HealthHandler) handleHealth(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	h.Health(w, r)
+}
+
+func (h *HealthHandler) handleLive(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	// Clean up path to handle both with and without trailing slash
+	if r.URL.Path != "/health/live" && r.URL.Path != "/health/live/" {
+		http.NotFound(w, r)
+		return
+	}
+	h.Live(w, r)
+}
+
+func (h *HealthHandler) handleReady(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	// Clean up path to handle both with and without trailing slash
+	if r.URL.Path != "/health/ready" && r.URL.Path != "/health/ready/" {
+		http.NotFound(w, r)
+		return
+	}
+	h.Ready(w, r)
+}
+
+func (h *HealthHandler) Live(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
+}
+
+func (h *HealthHandler) Ready(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
+}
+
 // @Summary Get health status
 // @Description Get the health status of all system components
 // @Tags health
@@ -49,7 +100,7 @@ func NewHealthHandler(mysqlDB, postgresDB *sql.DB, redisClient *redis.Client, ka
 // @Produce json
 // @Success 200 {object} HealthStatus
 // @Router /health [get]
-func (h *HealthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return

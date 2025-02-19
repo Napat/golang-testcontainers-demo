@@ -1,16 +1,16 @@
 ### Create a new user
-POST http://localhost:8080/users
+POST http://localhost:8080/api/v1/users
 Content-Type: application/json
 
 {
-    "username": "19johndoe",
-    "email": "19john@example.com",
+    "username": "q19johndoe",
+    "email": "q19john@example.com",
     "full_name": "John Doe",
     "password": "password123"
 }
 
 ### Get user by ID
-GET http://localhost:8080/users/1
+GET http://localhost:8080/api/v1/users/0195030e-2855-7d2f-aaf5-9afd51e4f93a
 
 ### List all users
-GET http://localhost:8080/users
+GET http://localhost:8080/api/v1/users

@@ -1,9 +1,5 @@
 package handler
 
-import (
-	"net/http"
-)
-
 // Handler holds all HTTP handlers
 type Handler struct {
 	userHandler    *UserHandler
@@ -28,18 +24,22 @@ func New(
 	}
 }
 
-// ServeHTTP implements the http.Handler interface
-func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	switch {
-	case r.URL.Path == "/users" || r.URL.Path == "/users/":
-		h.userHandler.ServeHTTP(w, r)
-	case r.URL.Path == "/products" || r.URL.Path == "/products/":
-		h.productHandler.ServeHTTP(w, r)
-	case r.URL.Path == "/orders" || r.URL.Path == "/orders/":
-		h.orderHandler.ServeHTTP(w, r)
-	case r.URL.Path == "/messages" || r.URL.Path == "/messages/":
-		h.messageHandler.ServeHTTP(w, r)
-	default:
-		http.NotFound(w, r)
-	}
+// GetUserHandler returns the user handler
+func (h *Handler) GetUserHandler() *UserHandler {
+	return h.userHandler
+}
+
+// GetProductHandler returns the product handler
+func (h *Handler) GetProductHandler() *ProductHandler {
+	return h.productHandler
+}
+
+// GetOrderHandler returns the order handler
+func (h *Handler) GetOrderHandler() *OrderHandler {
+	return h.orderHandler
+}
+
+// GetMessageHandler returns the message handler
+func (h *Handler) GetMessageHandler() *MessageHandler {
+	return h.messageHandler
 }

@@ -1,5 +1,5 @@
 ### Create a new order
-POST http://localhost:8080/orders
+POST http://localhost:8080/api/v1/orders
 Content-Type: application/json
 
 {
@@ -20,16 +20,7 @@ Content-Type: application/json
 }
 
 ### Search orders by customer ID
-GET http://localhost:8080/orders/search
-Content-Type: application/json
-
-{
-    "query": {
-        "match": {
-            "customer_id": "cust-1"
-        }
-    }
-}
+GET http://localhost:8080/api/v1/orders/search?customer_id=cust-1
 
 ### Simple search across all fields
-GET http://localhost:8080/orders/simple-search?q=TestProduct
+GET http://localhost:8080/api/v1/orders/simple-search?q=TestProduct

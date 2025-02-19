@@ -5,30 +5,50 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/Napat/golang-testcontainers-demo/pkg/metrics"
 	"github.com/go-redis/redis/v8"
 )
 
-// Rename from Cache to CacheRepository for consistency
 type CacheRepository struct {
-	client *redis.Client
+	client  *redis.Client
+	metrics *metrics.CacheMetrics
 }
 
 func NewCacheRepository(client *redis.Client) *CacheRepository {
-	return &CacheRepository{client: client}
-}
-
-func (c *CacheRepository) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
-	data, err := json.Marshal(value)
-	if (err != nil) {
-		return err
+	return &CacheRepository{
+		client:  client,
+		metrics: metrics.NewCacheMetrics(),
 	}
-	return c.client.Set(ctx, key, data, expiration).Err()
 }
 
-func (c *CacheRepository) Get(ctx context.Context, key string, dest interface{}) error {
-	data, err := c.client.Get(ctx, key).Bytes()
+func (r *CacheRepository) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
+	timer := time.Now()
+	defer func() {
+		r.metrics.OperationDuration.WithLabelValues("set").Observe(time.Since(timer).Seconds())
+	}()
+
+	data, err := json.Marshal(value)
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(data, dest)
+
+	return r.client.Set(ctx, key, data, expiration).Err()
+}
+
+func (r *CacheRepository) Get(ctx context.Context, key string, result interface{}) error {
+	timer := time.Now()
+	defer func() {
+		r.metrics.OperationDuration.WithLabelValues("get").Observe(time.Since(timer).Seconds())
+	}()
+
+	data, err := r.client.Get(ctx, key).Bytes()
+	if err != nil {
+		if err == redis.Nil {
+			r.metrics.MissesTotal.Inc()
+		}
+		return err
+	}
+
+	r.metrics.HitsTotal.Inc()
+	return json.Unmarshal(data, result)
 }

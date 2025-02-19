@@ -1,0 +1,33 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'testcontainers-demo'
+    static_configs:
+      - targets: ['host.docker.internal:8080']
+    metrics_path: '/metrics'
+    honor_labels: true  # รักษา label ที่มาจาก target
+
+  - job_name: 'repository-metrics'
+    static_configs:
+      - targets: ['host.docker.internal:8080']
+    metrics_path: '/metrics'
+    honor_labels: true
+    metric_relabel_configs:
+      # Database metrics
+      - source_labels: [__name__]
+        regex: '(user|product)_db_.*'
+        action: keep
+      # Cache metrics
+      - source_labels: [__name__]
+        regex: 'cache_.*'
+        action: keep
+      # Message metrics
+      - source_labels: [__name__]
+        regex: 'messages_.*'
+        action: keep
+      # Search metrics
+      - source_labels: [__name__]
+        regex: 'searches_.*'
+        action: keep

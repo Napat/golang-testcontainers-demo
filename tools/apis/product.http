@@ -1,9 +1,9 @@
 ### Create a new product
-POST http://localhost:8080/products
+POST http://localhost:8080/api/v1/products
 Content-Type: application/json
 
 {
-    "sku": "PROD-002",
+    "sku": "PROD-005",
     "name": "Test Product",
     "description": "A test product",
     "price": 299.99,
@@ -11,4 +11,4 @@ Content-Type: application/json
 }
 
 ### Get all products
-GET http://localhost:8080/products
+GET http://localhost:8080/api/v1/products

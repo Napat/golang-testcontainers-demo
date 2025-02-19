@@ -3,147 +3,143 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
+	"strings"
 
 	"github.com/Napat/golang-testcontainers-demo/pkg/errors"
 	"github.com/Napat/golang-testcontainers-demo/pkg/middleware"
 	"github.com/Napat/golang-testcontainers-demo/pkg/model"
+	"github.com/Napat/golang-testcontainers-demo/pkg/response"
+	"github.com/Napat/golang-testcontainers-demo/pkg/routes"
 )
 
 type OrderRepository interface {
 	CreateOrder(ctx context.Context, order *model.Order) error
-	SearchOrders(ctx context.Context, query map[string]interface{}) ([]model.Order, error)
+	SearchOrders(ctx context.Context, params map[string]interface{}) ([]model.Order, error)
 }
 
 type OrderHandler struct {
-	repo OrderRepository
+	orderRepo OrderRepository
+	routes    []routes.Route
 }
 
 func NewOrderHandler(repo OrderRepository) *OrderHandler {
-	return &OrderHandler{repo: repo}
+	h := &OrderHandler{
+		orderRepo: repo,
+	}
+
+	h.routes = []routes.Route{
+		{
+			Method:  http.MethodGet,
+			Pattern: "/orders",
+			Handler: h.ListOrders,
+		},
+		{
+			Method:  http.MethodPost,
+			Pattern: "/orders",
+			Handler: h.createOrder,
+		},
+		{
+			Method:  http.MethodGet,
+			Pattern: "/orders/search",
+			Handler: h.searchOrders,
+		},
+		{
+			Method:  http.MethodGet,
+			Pattern: "/orders/simple-search",
+			Handler: h.simpleSearch,
+		},
+	}
+
+	return h
 }
 
-func (h *OrderHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	switch {
-	case r.Method == http.MethodPost && r.URL.Path == "/orders":
-		h.CreateOrder(w, r)
-	case r.Method == http.MethodGet && r.URL.Path == "/orders/search":
-		h.searchOrders(w, r)
-	case r.Method == http.MethodGet && r.URL.Path == "/orders/simple-search":
-		h.handleOrder(w, r)
-	case r.Method == http.MethodGet && r.URL.Path == "/orders":
-		h.ListOrders(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
+// GetRoutes returns all routes for this handler
+func (h *OrderHandler) GetRoutes() []routes.Route {
+	return h.routes
 }
 
 // @Summary Create a new order
-// @Description Create a new order with the given details
+// @Description Create a new order in the system
 // @Tags orders
 // @Accept json
 // @Produce json
-// @Param order body model.Order true "Order details"
+// @Param order body model.Order true "Order object"
 // @Success 201 {object} model.Order
-// @Failure 400 {object} errors.Error
-// @Failure 500 {object} errors.Error
-// @Router /orders [post]
-func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
+// @Failure 400 {object} map[string]string
+// @Router /api/v1/orders [post]
+func (h *OrderHandler) createOrder(w http.ResponseWriter, r *http.Request) {
 	var order model.Order
 	if err := json.NewDecoder(r.Body).Decode(&order); err != nil {
-		middleware.WriteError(w, errors.NewBadRequest("createOrder", "invalid request body"))
+		response.RespondWithError(w, http.StatusBadRequest, "Invalid request payload", "createOrder")
 		return
 	}
 
-	if err := order.Validate(); err != nil {
-		middleware.WriteError(w, errors.NewValidationError("createOrder", err.Error()))
+	if err := h.orderRepo.CreateOrder(r.Context(), &order); err != nil {
+		log.Printf("Error creating order: %v", err)
+		response.RespondWithError(w, http.StatusInternalServerError, "Failed to create order", "createOrder")
 		return
 	}
 
-	if err := h.repo.CreateOrder(r.Context(), &order); err != nil {
-		middleware.WriteError(w, errors.NewInternalError("createOrder", err))
-		return
-	}
-
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(order)
 }
 
 // @Summary Search orders
-// @Description Search orders using Elasticsearch query
+// @Description Search orders using customer ID
 // @Tags orders
 // @Accept json
 // @Produce json
-// @Param query body object true "Search query"
+// @Param customer_id query string false "Customer ID to search for"
 // @Success 200 {array} model.Order
-// @Success 204 "No Content"
-// @Failure 400 {object} errors.Error
-// @Failure 500 {object} errors.Error
-// @Router /orders/search [get]
+// @Router /api/v1/orders/search [get]
 func (h *OrderHandler) searchOrders(w http.ResponseWriter, r *http.Request) {
-	var query map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&query); err != nil {
-		middleware.WriteError(w, errors.NewBadRequest("searchOrders", "invalid query format"))
-		return
+	params := make(map[string]interface{})
+	if customerID := r.URL.Query().Get("customer_id"); customerID != "" {
+		params["customer_id"] = customerID
 	}
 
-	orders, err := h.repo.SearchOrders(r.Context(), query)
+	orders, err := h.orderRepo.SearchOrders(r.Context(), params)
 	if err != nil {
-		middleware.WriteError(w, errors.NewInternalError("searchOrders", err))
+		log.Printf("Error searching orders: %v", err)
+		response.RespondWithError(w, http.StatusInternalServerError, "Failed to search orders", "searchOrders")
 		return
 	}
 
-	if len(orders) == 0 {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(orders)
 }
 
 // @Summary Simple search orders
-// @Description Search orders using a simple query parameter
+// @Description Search orders using a simple query string
 // @Tags orders
 // @Accept json
 // @Produce json
 // @Param q query string true "Search query"
 // @Success 200 {array} model.Order
-// @Success 204 "No Content"
-// @Failure 400 {object} errors.Error
-// @Failure 500 {object} errors.Error
-// @Router /orders/simple-search [get]
-func (h *OrderHandler) handleOrder(w http.ResponseWriter, r *http.Request) {
+// @Router /api/v1/orders/simple-search [get]
+func (h *OrderHandler) simpleSearch(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	if query == "" {
-		middleware.WriteError(w, errors.NewBadRequest("simpleSearch", "query parameter 'q' is required"))
+		response.RespondWithError(w, http.StatusBadRequest, "Search query is required", "simpleSearch")
 		return
 	}
 
-	searchQuery := map[string]interface{}{
-		"query": map[string]interface{}{
-			"multi_match": map[string]interface{}{
-				"query":  query,
-				"fields": []string{"customer_id", "status", "items.product_id", "items.product_name"},
-				"type":   "phrase_prefix",
-			},
-		},
+	params := map[string]interface{}{
+		"query": query,
 	}
 
-	orders, err := h.repo.SearchOrders(r.Context(), searchQuery)
+	orders, err := h.orderRepo.SearchOrders(r.Context(), params)
 	if err != nil {
-		middleware.WriteError(w, errors.NewInternalError("simpleSearch", err))
+		log.Printf("Error performing simple search: %v", err)
+		response.RespondWithError(w, http.StatusInternalServerError, "Failed to search orders", "simpleSearch")
 		return
 	}
 
-	if len(orders) == 0 {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-
-	if err := json.NewEncoder(w).Encode(orders); err != nil {
-		middleware.WriteError(w, errors.NewInternalError("simpleSearch", err))
-	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(orders)
 }
 
 // @Summary List all orders
@@ -156,7 +152,7 @@ func (h *OrderHandler) handleOrder(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} errors.Error
 // @Router /orders [get]
 func (h *OrderHandler) ListOrders(w http.ResponseWriter, r *http.Request) {
-	orders, err := h.repo.SearchOrders(r.Context(), map[string]interface{}{
+	orders, err := h.orderRepo.SearchOrders(r.Context(), map[string]interface{}{
 		"query": map[string]interface{}{
 			"match_all": map[string]interface{}{},
 		},
@@ -172,4 +168,20 @@ func (h *OrderHandler) ListOrders(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(orders)
+}
+
+// ServeHTTP implements http.Handler interface
+func (h *OrderHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Remove /api/v1 prefix if present for both test and production compatibility
+	path := strings.TrimPrefix(r.URL.Path, "/api/v1")
+
+	// Find matching route
+	for _, route := range h.routes {
+		if strings.TrimSuffix(path, "/") == strings.TrimSuffix(route.Pattern, "/") && r.Method == route.Method {
+			route.Handler(w, r)
+			return
+		}
+	}
+
+	http.NotFound(w, r)
 }

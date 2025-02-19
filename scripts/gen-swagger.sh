@@ -23,12 +23,12 @@ rm -rf api/docs/*
 # Generate swagger documentation
 echo "Generating Swagger documentation..."
 swag init \
-    --dir . \
-    --generalInfo cmd/api/main.go \
+    -g cmd/api/main.go \
     --output ./api/docs \
+    --outputTypes go,json,yaml \
     --parseDependency \
     --parseInternal \
-    --exclude .git,vendor
+    --exclude .git,vendor,test
 
 echo "Swagger documentation generated successfully!"
 

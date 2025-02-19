@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/Napat/golang-testcontainers-demo/internal/handler"
+	"github.com/Napat/golang-testcontainers-demo/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -25,14 +26,14 @@ func TestMessageHandler_ServeHTTP(t *testing.T) {
 	tests := []struct {
 		name           string
 		method         string
-		requestBody    handler.MessageRequest
+		requestBody    model.MessageRequest
 		mockError      error
 		expectedStatus int
 	}{
 		{
 			name:           "success",
 			method:         http.MethodPost,
-			requestBody:    handler.MessageRequest{Content: "test message"},
+			requestBody:    model.MessageRequest{Content: "test message"},
 			mockError:      nil,
 			expectedStatus: http.StatusAccepted,
 		},
@@ -44,9 +45,9 @@ func TestMessageHandler_ServeHTTP(t *testing.T) {
 		{
 			name:           "producer error",
 			method:         http.MethodPost,
-			requestBody:    handler.MessageRequest{Content: "test message"},
+			requestBody:    model.MessageRequest{Content: "test message"},
 			mockError:      assert.AnError,
-			expectedStatus: http.StatusOK,
+			expectedStatus: http.StatusInternalServerError,
 		},
 	}
 

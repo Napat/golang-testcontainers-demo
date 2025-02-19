@@ -51,16 +51,19 @@ run-with-config:
 .PHONY: docker-up
 docker-up:
 	$(DOCKER_COMPOSE) up -d
+	$(DOCKER_COMPOSE) -f docker-compose.monitoring.yml up -d
 
 ## docker-down: Stop all docker containers
 .PHONY: docker-down
 docker-down:
 	$(DOCKER_COMPOSE) down
+	$(DOCKER_COMPOSE) -f docker-compose.monitoring.yml down
 
 ## docker-down-v: Stop and remove all docker containers and volumes
 .PHONY: docker-down-v
 docker-down-v:
 	$(DOCKER_COMPOSE) down -v
+	$(DOCKER_COMPOSE) -f docker-compose.monitoring.yml down -v
 
 ## docker-logs: Show docker containers logs
 .PHONY: docker-logs
@@ -71,6 +74,7 @@ docker-logs:
 .PHONY: docker-ps
 docker-ps:
 	$(DOCKER_COMPOSE) ps
+	$(DOCKER_COMPOSE) -f docker-compose.monitoring.yml ps
 
 ## test: Run unit tests
 .PHONY: test

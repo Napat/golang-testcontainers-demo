@@ -54,10 +54,19 @@ type Config struct {
 }
 
 type Server struct {
-	Port         string `yaml:"port"`
-	ReadTimeout  int    `yaml:"read_timeout"`
-	WriteTimeout int    `yaml:"write_timeout"`
-	IdleTimeout  int    `yaml:"idle_timeout"`
+	Port         string     `yaml:"port"`
+	ReadTimeout  int        `yaml:"read_timeout"`
+	WriteTimeout int        `yaml:"write_timeout"`
+	IdleTimeout  int        `yaml:"idle_timeout"`
+	CORS         CORSConfig `yaml:"cors"`
+}
+
+type CORSConfig struct {
+	Enabled        bool     `yaml:"enabled"`
+	AllowedOrigins []string `yaml:"allowed_origins"`
+	AllowedMethods []string `yaml:"allowed_methods"`
+	AllowedHeaders []string `yaml:"allowed_headers"`
+	MaxAge         int      `yaml:"max_age"`
 }
 
 type TracingConfig struct {

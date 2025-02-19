@@ -40,11 +40,13 @@ func (s *OrderAPITestSuite) SetupSuite() {
 	s.SetupElasticsearch()
 	s.repo = repository_order.NewOrderRepository(s.ESClient)
 
-	router := http.NewServeMux()
+	// Create a new handler
 	orderHandler := handler.NewOrderHandler(s.repo)
-	router.Handle("/orders", orderHandler)
-	router.Handle("/orders/search", orderHandler)
-	router.Handle("/orders/simple-search", orderHandler)
+
+	// Create a router that forwards all /api/v1/orders* requests to the order handler
+	router := http.NewServeMux()
+	router.Handle("/api/v1/orders/", orderHandler)
+	router.Handle("/api/v1/orders", orderHandler)
 	s.handler = router
 }
 
@@ -52,28 +54,56 @@ func (s *OrderAPITestSuite) SetupSuite() {
 // index, creates a new one with the order template, and waits for the index
 // to be ready.
 func (s *OrderAPITestSuite) SetupTest() {
-	// Clear existing index
-	_, err := s.ESClient.Indices.Delete([]string{"orders"})
+	// Delete index if exists
+	exists, err := s.ESClient.Indices.Exists([]string{"orders"})
+	s.Require().NoError(err)
+	if !exists.IsError() {
+		_, err = s.ESClient.Indices.Delete([]string{"orders"})
+		s.Require().NoError(err)
+	}
+
+	// Delete template if exists
+	_, err = s.ESClient.Indices.DeleteTemplate("orders_template")
 	s.Require().NoError(err)
 
-	// Create new index with template
+	// Create new template
 	templateFile := filepath.Join("testdata", "order_template.json")
 	template, err := os.ReadFile(templateFile)
 	s.Require().NoError(err)
 
 	resp, err := s.ESClient.Indices.PutTemplate("orders_template",
-		bytes.NewReader(template))
+		bytes.NewReader(template),
+		s.ESClient.Indices.PutTemplate.WithCreate(true))
 	s.Require().NoError(err)
-	defer resp.Body.Close()
+	s.Require().False(resp.IsError(), "Failed to put template: %s", resp.String())
+	resp.Body.Close()
 
 	// Create index
-	resp, err = s.ESClient.Indices.Create("orders")
+	resp, err = s.ESClient.Indices.Create("orders",
+		s.ESClient.Indices.Create.WithWaitForActiveShards("1"))
 	s.Require().NoError(err)
-	defer resp.Body.Close()
+	s.Require().False(resp.IsError(), "Failed to create index: %s", resp.String())
+	resp.Body.Close()
 
-	// Wait for index to be ready
-	_, err = s.ESClient.Indices.Refresh()
+	// Verify index settings and mappings
+	resp, err = s.ESClient.Indices.GetMapping(s.ESClient.Indices.GetMapping.WithIndex("orders"))
 	s.Require().NoError(err)
+	s.Require().False(resp.IsError(), "Failed to get mapping: %s", resp.String())
+
+	var mapping map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&mapping)
+	s.Require().NoError(err)
+	resp.Body.Close()
+
+	// Verify customer_id field is keyword type
+	ordersMapping := mapping["orders"].(map[string]interface{})
+	mappings := ordersMapping["mappings"].(map[string]interface{})
+	properties := mappings["properties"].(map[string]interface{})
+	customerID := properties["customer_id"].(map[string]interface{})
+	s.Require().Equal("keyword", customerID["type"], "customer_id should be keyword type")
+
+	// Additional wait to ensure cluster is ready
+	time.Sleep(1 * time.Second)
 }
 
 // TestCreateOrderAPI tests the /orders endpoint for creating a new order.
@@ -103,7 +133,8 @@ func (s *OrderAPITestSuite) TestCreateOrderAPI() {
 	body, err := json.Marshal(order)
 	s.Require().NoError(err)
 
-	req := httptest.NewRequest(http.MethodPost, "/orders", bytes.NewReader(body))
+	// Change URL to include /api/v1 prefix
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/orders", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 
@@ -115,6 +146,13 @@ func (s *OrderAPITestSuite) TestCreateOrderAPI() {
 	err = json.NewDecoder(rec.Body).Decode(&createdOrder)
 	s.Require().NoError(err)
 	s.Equal(order.ID, createdOrder.ID)
+
+	// Wait for indexing
+	_, err = s.ESClient.Indices.Refresh(
+		s.ESClient.Indices.Refresh.WithIndex("orders"),
+	)
+	s.Require().NoError(err)
+	time.Sleep(1 * time.Second)
 }
 
 // TestSearchOrdersAPI tests the /orders/search endpoint for searching for
@@ -144,23 +182,43 @@ func (s *OrderAPITestSuite) TestSearchOrdersAPI() {
 	err := s.repo.CreateOrder(context.Background(), &order)
 	s.Require().NoError(err)
 
-	// Ensure the index is refreshed
-	_, err = s.ESClient.Indices.Refresh()
-	s.Require().NoError(err)
-
-	// Then search for it
+	// Verify document is indexed
+	var buf bytes.Buffer
 	query := map[string]interface{}{
 		"query": map[string]interface{}{
-			"match": map[string]interface{}{
-				"customer_id": "cust-2",
-			},
+			"match_all": map[string]interface{}{},
 		},
 	}
+	if err := json.NewEncoder(&buf).Encode(query); err != nil {
+		s.T().Fatalf("Error encoding query: %v", err)
+	}
 
-	body, err := json.Marshal(query)
+	searchResp, err := s.ESClient.Search(
+		s.ESClient.Search.WithContext(context.Background()),
+		s.ESClient.Search.WithIndex("orders"),
+		s.ESClient.Search.WithBody(&buf),
+		s.ESClient.Search.WithTrackTotalHits(true),
+	)
 	s.Require().NoError(err)
+	defer searchResp.Body.Close()
 
-	req := httptest.NewRequest(http.MethodGet, "/orders/search", bytes.NewReader(body))
+	var result map[string]interface{}
+	if err := json.NewDecoder(searchResp.Body).Decode(&result); err != nil {
+		s.T().Fatalf("Error parsing the response body: %s", err)
+	}
+
+	hits := result["hits"].(map[string]interface{})
+	total := hits["total"].(map[string]interface{})["value"].(float64)
+	s.Require().Equal(float64(1), total, "Expected 1 document in index")
+
+	// Verify index count and refresh before search endpoint call
+	// (manual verification already done above)
+	_, err = s.ESClient.Indices.Refresh(s.ESClient.Indices.Refresh.WithIndex("orders"))
+	s.Require().NoError(err)
+	time.Sleep(500 * time.Millisecond)
+
+	// Then search for it
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/orders/search?customer_id=cust-2", nil)
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 
@@ -199,12 +257,42 @@ func (s *OrderAPITestSuite) TestSimpleSearchAPI() {
 	err := s.repo.CreateOrder(context.Background(), &order)
 	s.Require().NoError(err)
 
-	// Ensure the index is refreshed
-	_, err = s.ESClient.Indices.Refresh()
+	// Verify document is indexed
+	var buf bytes.Buffer
+	query := map[string]interface{}{
+		"query": map[string]interface{}{
+			"match_all": map[string]interface{}{},
+		},
+	}
+	if err := json.NewEncoder(&buf).Encode(query); err != nil {
+		s.T().Fatalf("Error encoding query: %v", err)
+	}
+
+	searchResp, err := s.ESClient.Search(
+		s.ESClient.Search.WithContext(context.Background()),
+		s.ESClient.Search.WithIndex("orders"),
+		s.ESClient.Search.WithBody(&buf),
+		s.ESClient.Search.WithTrackTotalHits(true),
+	)
 	s.Require().NoError(err)
+	defer searchResp.Body.Close()
+
+	var result map[string]interface{}
+	if err := json.NewDecoder(searchResp.Body).Decode(&result); err != nil {
+		s.T().Fatalf("Error parsing the response body: %s", err)
+	}
+
+	hits := result["hits"].(map[string]interface{})
+	total := hits["total"].(map[string]interface{})["value"].(float64)
+	s.Require().Equal(float64(1), total, "Expected 1 document in index")
+
+	// Verify index count and refresh before simple search call
+	_, err = s.ESClient.Indices.Refresh(s.ESClient.Indices.Refresh.WithIndex("orders"))
+	s.Require().NoError(err)
+	time.Sleep(500 * time.Millisecond)
 
 	// Test simple search
-	req := httptest.NewRequest(http.MethodGet, "/orders/simple-search?q=cust-1", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/orders/simple-search?q=cust-1", nil)
 	w := httptest.NewRecorder()
 	s.handler.ServeHTTP(w, req)
 

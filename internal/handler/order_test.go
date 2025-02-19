@@ -104,12 +104,26 @@ func TestOrderHandler_CreateOrder(t *testing.T) {
 			}
 
 			handler := handler.NewOrderHandler(mockRepo)
+			routes := handler.GetRoutes()
+
+			// Find the create order route
+			var createOrderHandler http.HandlerFunc
+			for _, route := range routes {
+				if route.Method == http.MethodPost && route.Pattern == "/orders" {
+					createOrderHandler = route.Handler
+					break
+				}
+			}
+
+			if createOrderHandler == nil {
+				t.Fatal("Create order route not found")
+			}
 
 			body, _ := json.Marshal(tt.input)
 			req := httptest.NewRequest(http.MethodPost, "/orders", bytes.NewBuffer(body))
 			rec := httptest.NewRecorder()
 
-			handler.ServeHTTP(rec, req)
+			createOrderHandler(rec, req)
 
 			assert.Equal(t, tt.expectedStatus, rec.Code)
 			if tt.setupMock {

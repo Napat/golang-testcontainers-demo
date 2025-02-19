@@ -18,14 +18,21 @@ import (
 	"github.com/IBM/sarama"
 	_ "github.com/Napat/golang-testcontainers-demo/api/docs"
 	"github.com/Napat/golang-testcontainers-demo/internal/config"
+	"github.com/Napat/golang-testcontainers-demo/internal/handler"
+	"github.com/Napat/golang-testcontainers-demo/internal/handler/health"
+	"github.com/Napat/golang-testcontainers-demo/internal/repository/repository_cache"
+	"github.com/Napat/golang-testcontainers-demo/internal/repository/repository_event"
+	"github.com/Napat/golang-testcontainers-demo/internal/repository/repository_order"
+	"github.com/Napat/golang-testcontainers-demo/internal/repository/repository_product"
+	"github.com/Napat/golang-testcontainers-demo/internal/repository/repository_user"
 	"github.com/Napat/golang-testcontainers-demo/internal/router"
-	"github.com/Napat/golang-testcontainers-demo/pkg/middleware"
 	"github.com/Napat/golang-testcontainers-demo/pkg/shutdown"
 	"github.com/Napat/golang-testcontainers-demo/pkg/tracing"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/go-redis/redis/v8"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
@@ -449,22 +456,22 @@ func getDependencyVersions() map[string]string {
 
 // printVersionInfo แสดงข้อมูลเวอร์ชันและการ build
 func printVersionInfo() {
-    versions := getDependencyVersions()
+	versions := getDependencyVersions()
 
-    log.Printf("\n📦 Build Information:")
-    if buildTime != "" {
-        log.Printf("   ├── Build Time: %s", buildTime)
-    }
-    if gitCommitSHA != "" {
-        log.Printf("   ├── Git Commit: %s", gitCommitSHA)
-    }
-    log.Printf("   ├── Version: %s", getAppVersion())
-    log.Printf("   └── Dependencies:")
-    log.Printf("       ├── MySQL Driver: %s", versions["mysql"])
-    log.Printf("       ├── PostgreSQL Driver: %s", versions["postgres"])
-    log.Printf("       ├── Redis Client: %s", versions["redis"])
-    log.Printf("       ├── Kafka Client: %s", versions["kafka"])
-    log.Printf("       └── Elasticsearch Client: %s", versions["elasticsearch"])
+	log.Printf("\n📦 Build Information:")
+	log.Printf("   ├── Version: %s", getAppVersion())
+	if buildTime != "" {
+		log.Printf("   ├── Build Time: %s", buildTime)
+	}
+	if gitCommitSHA != "" {
+		log.Printf("   ├── Git Commit: %s", gitCommitSHA)
+	}
+	log.Printf("   └── Dependencies:")
+	log.Printf("       ├── MySQL Driver: %s", versions["mysql"])
+	log.Printf("       ├── PostgreSQL Driver: %s", versions["postgres"])
+	log.Printf("       ├── Redis Client: %s", versions["redis"])
+	log.Printf("       ├── Kafka Client: %s", versions["kafka"])
+	log.Printf("       └── Elasticsearch Client: %s", versions["elasticsearch"])
 }
 
 // printActiveConfiguration แสดงการตั้งค่าที่ใช้งานอยู่
@@ -501,9 +508,8 @@ func printActiveConfiguration(cfg *config.Config, srv *http.Server) {
 func main() {
 	startTime := time.Now()
 
-	// Load configuration from yaml
+	// Load configuration
 	configPath := getEnvOrDefault("CONFIG_PATH", "configs/dev.yaml")
-
 	cfg, err := config.Load(configPath)
 	if err != nil {
 		log.Fatalf("❌ Failed to load config: %v", err)
@@ -511,15 +517,23 @@ func main() {
 
 	// Print initial information
 	printEnvironmentInfo(configPath, cfg)
-	printVersionInfo() // แสดง version info ก่อน
+	printVersionInfo()
 
 	log.Printf("\n🔌 Services Status:")
 
-	// Initialize all services
+	// Initialize services
 	mysqlDB, postgresDB, redisClient, kafkaClient, kafkaProducer, esClient, err := initializeServices(cfg)
 	if err != nil {
 		log.Fatalf("❌ Critical service initialization failed: %v", err)
 	}
+
+	// Initialize repositories and handlers
+	userRepo := repository_user.NewUserRepository(mysqlDB)
+	productRepo := repository_product.NewProductRepository(postgresDB)
+	cacheRepo := repository_cache.NewCacheRepository(redisClient)
+	eventRepo := repository_event.NewProducerRepository(kafkaProducer, cfg.Kafka.Topic)
+	orderRepo := repository_order.NewOrderRepository(esClient)
+	healthHandler := health.NewHealthHandler(mysqlDB, postgresDB, redisClient, kafkaClient, esClient)
 
 	// Setup deferred cleanup
 	defer func() {
@@ -537,7 +551,7 @@ func main() {
 		}
 	}()
 
-	// Print system and server information
+	// Print system information
 	printSystemInfo()
 
 	addr := fmt.Sprintf(":%s", cfg.Server.Port)
@@ -545,7 +559,7 @@ func main() {
 	printEndpoints()
 	printDevTools(cfg, addr)
 
-	// Print connection pools info after services are initialized
+	// Print connection pools info
 	printConnectionPoolInfo(mysqlDB, postgresDB, redisClient)
 
 	// Initialize shutdown manager
@@ -582,12 +596,27 @@ func main() {
 		}
 		defer cleanup()
 
-		// Add tracing shutdown to manager
 		shutdownManager.AddHandler(func(ctx context.Context) error {
 			cleanup()
 			return nil
 		})
 	}
+
+	// Initialize handlers
+	userHandler := handler.NewUserHandler(userRepo, cacheRepo, eventRepo)
+	productHandler := handler.NewProductHandler(productRepo)
+	orderHandler := handler.NewOrderHandler(orderRepo)
+	messageHandler := handler.NewMessageHandler(eventRepo)
+
+	// Setup router using the router package
+	routerHandler := router.Setup(
+		userHandler,
+		productHandler,
+		orderHandler,
+		messageHandler,
+		healthHandler,
+		cfg,
+	)
 
 	// Setup HTTP server
 	rootMux := http.NewServeMux()
@@ -601,19 +630,16 @@ func main() {
 		httpSwagger.DomID("swagger-ui"),
 	))
 
-	// Add app endpoints
-	rtr := router.Setup(mysqlDB, postgresDB, redisClient, kafkaClient, kafkaProducer, esClient, cfg)
-	rootMux.Handle("/", rtr)
+	// Add metrics endpoint
+	rootMux.Handle("/metrics", promhttp.Handler())
 
-	// Add middleware
-	chain := middleware.Profiling()(
-		middleware.Tracing("testcontainers-demo")(rootMux),
-	)
+	// Mount router
+	rootMux.Handle("/", routerHandler)
 
 	// Create and configure server
 	srv := &http.Server{
 		Addr:         addr,
-		Handler:      chain,
+		Handler:      rootMux,
 		ReadTimeout:  time.Duration(cfg.Server.ReadTimeout) * time.Second,
 		WriteTimeout: time.Duration(cfg.Server.WriteTimeout) * time.Second,
 		IdleTimeout:  time.Duration(cfg.Server.IdleTimeout) * time.Second,

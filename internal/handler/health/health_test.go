@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestHealthHandler_ServeHTTP(t *testing.T) {
+func TestHealthHandler_Health(t *testing.T) {
 	tests := []struct {
 		name           string
 		method         string
@@ -37,7 +37,7 @@ func TestHealthHandler_ServeHTTP(t *testing.T) {
 			req := httptest.NewRequest(tt.method, "/health", nil)
 			w := httptest.NewRecorder()
 
-			handler.ServeHTTP(w, req)
+			handler.Health(w, req)
 
 			assert.Equal(t, tt.expectedStatus, w.Code)
 

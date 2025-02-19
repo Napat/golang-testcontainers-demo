@@ -73,10 +73,6 @@ func (s *ProducerTestSuite) SetupSuite() {
 	kafkaContainer, err := kafka.Run(s.ctx,
 		"confluentinc/cp-kafka:7.8.0",
 		kafka.WithClusterID("test-cluster"),
-		// testcontainers.WithWaitStrategy(
-		//     wait.ForLog("started (kafka.server.KafkaServer)").
-		//         WithStartupTimeout(2*time.Minute),
-		// ),
 	)
 	s.Require().NoError(err)
 	s.container = kafkaContainer

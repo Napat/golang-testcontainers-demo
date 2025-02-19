@@ -2,54 +2,86 @@ package handler
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
+	"strings"
 
-	"github.com/Napat/golang-testcontainers-demo/pkg/errors"
+	"github.com/Napat/golang-testcontainers-demo/pkg/model"
+	"github.com/Napat/golang-testcontainers-demo/pkg/response"
+	"github.com/Napat/golang-testcontainers-demo/pkg/routes"
 )
 
 type MessageProducer interface {
-	SendMessage(topic string, message interface{}) error
+	SendMessage(key string, value interface{}) error
 }
 
 type MessageHandler struct {
 	producer MessageProducer
+	routes   []routes.Route
 }
 
-// MessageRequest represents the message request body
-type MessageRequest struct {
-	Content string `json:"content"`
+func NewMessageHandler(producer MessageProducer) *MessageHandler {
+	h := &MessageHandler{
+		producer: producer,
+	}
+
+	// Prepare routes
+	h.routes = []routes.Route{
+		{
+			Method:  http.MethodPost,
+			Pattern: "/messages",
+			Handler: h.sendMessage,
+		},
+	}
+
+	return h
+}
+
+// GetRoutes returns all routes for this handler
+func (h *MessageHandler) GetRoutes() []routes.Route {
+	return h.routes
 }
 
 // @Summary Send a message
-// @Description Send a message to Kafka
+// @Description Send a message to the message broker
 // @Tags messages
 // @Accept json
 // @Produce json
-// @Param message body MessageRequest true "Message content"
-// @Success 202 "Accepted"
-// @Failure 400 {object} errors.Error "Bad Request"
-// @Failure 500 {object} errors.Error "Internal Server Error"
-// @Router /messages [post]
-func NewMessageHandler(producer MessageProducer) *MessageHandler {
-	return &MessageHandler{producer: producer}
+// @Param message body map[string]string true "Message content"
+// @Success 202 {object} map[string]string
+// @Router /api/v1/messages [post]
+func (h *MessageHandler) sendMessage(w http.ResponseWriter, r *http.Request) {
+	var req model.MessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.RespondWithError(w, http.StatusBadRequest, "Invalid request payload", "sendMessage")
+		return
+	}
+
+	if err := h.producer.SendMessage("message", req); err != nil {
+		log.Printf("Error sending message: %v", err)
+		response.RespondWithError(w, http.StatusInternalServerError, "Failed to send message", "sendMessage")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "success",
+		"message": "Message sent successfully",
+	})
 }
 
 func (h *MessageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	path := strings.TrimPrefix(r.URL.Path, "/api/v1")
+
+	if path == "/messages" {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		h.sendMessage(w, r)
 		return
 	}
 
-	var message MessageRequest
-	if err := json.NewDecoder(r.Body).Decode(&message); err != nil {
-		json.NewEncoder(w).Encode(errors.NewBadRequest("createMessage", "Invalid request body"))
-		return
-	}
-
-	if err := h.producer.SendMessage("message", message); err != nil {
-		json.NewEncoder(w).Encode(errors.NewInternalError("createMessage", err))
-		return
-	}
-
-	w.WriteHeader(http.StatusAccepted)
+	http.NotFound(w, r)
 }

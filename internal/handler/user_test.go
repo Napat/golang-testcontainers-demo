@@ -79,7 +79,7 @@ func TestUserHandler_CreateUser(t *testing.T) {
 				FullName: "Test User",
 				Password: "password123",
 			},
-			expectedStatus: http.StatusOK,
+			expectedStatus: http.StatusCreated,
 			mockError:      nil,
 			setupCache:     true,
 			setupProducer:  true,
@@ -126,12 +126,26 @@ func TestUserHandler_CreateUser(t *testing.T) {
 			}
 
 			handler := handler.NewUserHandler(mockRepo, mockCache, mockProducer)
+			routes := handler.GetRoutes()
+
+			// Find the create user route
+			var createUserHandler http.HandlerFunc
+			for _, route := range routes {
+				if route.Method == http.MethodPost && route.Pattern == "/users" {
+					createUserHandler = route.Handler
+					break
+				}
+			}
+
+			if createUserHandler == nil {
+				t.Fatal("Create user route not found")
+			}
 
 			body, _ := json.Marshal(tt.input)
 			req := httptest.NewRequest(http.MethodPost, "/users", bytes.NewBuffer(body))
 			rec := httptest.NewRecorder()
 
-			handler.ServeHTTP(rec, req)
+			createUserHandler(rec, req)
 
 			assert.Equal(t, tt.expectedStatus, rec.Code)
 			mockRepo.AssertExpectations(t)

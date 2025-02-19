@@ -218,28 +218,31 @@ go run ./cmd/api/main.go
 
 ```bash
 # Create a user
-curl -X POST http://localhost:8080/users \
+curl -X POST http://localhost:8080/api/v1/users \
   -H 'Content-Type: application/json' \
   -d '{
+    "id": "00000000-0000-0000-0000-000000000000",
     "username": "johndoe",
     "email": "john@example.com",
     "full_name": "John Doe",
-    "password": "password123"
+    "password": "password123",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T00:00:00Z"
   }'
 
-# Get user by ID
-curl http://localhost:8080/users/1
+# Get user by ID (using UUID)
+curl http://localhost:8080/api/v1/users/00000000-0000-0000-0000-000000000000
 
 # List all users
-curl http://localhost:8080/users
+curl http://localhost:8080/api/v1/users
 
 # Send message to Kafka
-curl -X POST http://localhost:8080/messages \
+curl -X POST http://localhost:8080/api/v1/messages \
   -H 'Content-Type: application/json' \
   -d '{"content": "Hello World"}'
 
 # Search documents in Elasticsearch
-curl http://localhost:8080/search?q=example
+curl http://localhost:8080/api/v1/search?q=example
 ```
 
 5. View traces in Jaeger UI:
@@ -311,18 +314,18 @@ span.SetAttributes(attribute.String("key", "value"))
 
 ```bash
 # Create a user
-curl -X POST http://localhost:8080/users \
+curl -X POST http://localhost:8080/api/v1/users \
   -H 'Content-Type: application/json' \
   -d '{"name": "John Doe", "email": "john@example.com"}'
 
 # Get user by ID
-curl http://localhost:8080/users/1
+curl http://localhost:8080/api/v1/users/00000000-0000-0000-0000-000000000000
 
 # List all users
-curl http://localhost:8080/users
+curl http://localhost:8080/api/v1/users
 
 # Create a product
-curl -X POST http://localhost:8080/products \
+curl -X POST http://localhost:8080/api/v1/products \
   -H "Content-Type: application/json" \
   -d '{
     "id": 1,
@@ -334,7 +337,7 @@ curl -X POST http://localhost:8080/products \
   }'
 
 # Create an order
-curl -X POST http://localhost:8080/orders \
+curl -X POST http://localhost:8080/api/v1/orders \
   -H "Content-Type: application/json" \
   -d '{
     "id": "order-1",
@@ -354,7 +357,7 @@ curl -X POST http://localhost:8080/orders \
   }'
 
 # Search orders with Elasticsearch query
-curl -X GET http://localhost:8080/orders/search \
+curl -X GET http://localhost:8080/api/v1/orders/search \
   -H "Content-Type: application/json" \
   -d '{
     "query": {
@@ -365,12 +368,12 @@ curl -X GET http://localhost:8080/orders/search \
   }'
 
 # Send message to Kafka
-curl -X POST http://localhost:8080/messages \
+curl -X POST http://localhost:8080/api/v1/messages \
   -H 'Content-Type: application/json' \
   -d '{"content": "Hello World"}'
 
 # Search documents in Elasticsearch
-curl http://localhost:8080/search?q=example
+curl http://localhost:8080/api/v1/search?q=example
 ```
 
 After making these API calls, you can:
@@ -653,27 +656,30 @@ MIT License
 
 ```bash
 # Create a user
-curl -X POST http://localhost:8080/users \
+curl -X POST http://localhost:8080/api/v1/users \
   -H 'Content-Type: application/json' \
   -d '{
+    "id": "00000000-0000-0000-0000-000000000000",
     "username": "johndoe",
     "email": "john@example.com",
     "full_name": "John Doe",
-    "password": "password123"
+    "password": "password123",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T00:00:00Z"
   }'
 
-# Get user by ID
-curl http://localhost:8080/users/1
+# Get user by ID (using UUID)
+curl http://localhost:8080/api/v1/users/00000000-0000-0000-0000-000000000000
 
 # List all users
-curl http://localhost:8080/users
+curl http://localhost:8080/api/v1/users
 ```
 
 ### Products API
 
 ```bash
 # Create a new product
-curl -X POST http://localhost:8080/products \
+curl -X POST http://localhost:8080/api/v1/products \
   -H "Content-Type: application/json" \
   -d '{
     "id": 1,
@@ -681,18 +687,23 @@ curl -X POST http://localhost:8080/products \
     "name": "Test Product",
     "description": "A test product",
     "price": 299.99,
-    "stock": 100
+    "stock": 100,
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T00:00:00Z"
   }'
 
 # Get all products
-curl http://localhost:8080/products
+curl http://localhost:8080/api/v1/products
+
+# Get product by ID
+curl http://localhost:8080/api/v1/products/1
 ```
 
 ### Orders API
 
 ```bash
 # Create a new order
-curl -X POST http://localhost:8080/orders \
+curl -X POST http://localhost:8080/api/v1/orders \
   -H "Content-Type: application/json" \
   -d '{
     "id": "order-1",
@@ -708,11 +719,16 @@ curl -X POST http://localhost:8080/orders \
         "unit_price": 299.99,
         "subtotal": 299.99
       }
-    ]
+    ],
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T00:00:00Z"
   }'
 
+# List all orders
+curl http://localhost:8080/orders
+
 # Search orders
-curl -X GET http://localhost:8080/orders/search \
+curl -X GET http://localhost:8080/api/v1/orders/search \
   -H "Content-Type: application/json" \
   -d '{
     "query": {
@@ -722,8 +738,8 @@ curl -X GET http://localhost:8080/orders/search \
     }
   }'
 
-# Simple search across all fields
-curl "http://localhost:8080/search?q=Test%20Product"
+# Simple search
+curl http://localhost:8080/api/v1/orders/simple-search?q=Test%20Product
 ```
 
 ## References

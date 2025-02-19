@@ -24,32 +24,9 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/health": {
-            "get": {
-                "description": "Get the health status of all system components",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "health"
-                ],
-                "summary": "Get health status",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/internal_handler_health.HealthStatus"
-                        }
-                    }
-                }
-            }
-        },
-        "/messages": {
+        "/api/v1/messages": {
             "post": {
-                "description": "Send a message to Kafka",
+                "description": "Send a message to the message broker",
                 "consumes": [
                     "application/json"
                 ],
@@ -67,65 +44,29 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.MessageRequest"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 ],
                 "responses": {
                     "202": {
-                        "description": "Accepted"
-                    },
-                    "400": {
-                        "description": "Bad Request",
+                        "description": "Accepted",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
             }
         },
-        "/orders": {
-            "get": {
-                "description": "Get a list of all orders",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "orders"
-                ],
-                "summary": "List all orders",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Order"
-                            }
-                        }
-                    },
-                    "204": {
-                        "description": "No Content"
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error"
-                        }
-                    }
-                }
-            },
+        "/api/v1/orders": {
             "post": {
-                "description": "Create a new order with the given details",
+                "description": "Create a new order in the system",
                 "consumes": [
                     "application/json"
                 ],
@@ -138,7 +79,7 @@ const docTemplate = `{
                 "summary": "Create a new order",
                 "parameters": [
                     {
-                        "description": "Order details",
+                        "description": "Order object",
                         "name": "order",
                         "in": "body",
                         "required": true,
@@ -157,21 +98,18 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
             }
         },
-        "/orders/search": {
+        "/api/v1/orders/search": {
             "get": {
-                "description": "Search orders using Elasticsearch query",
+                "description": "Search orders using customer ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -184,13 +122,10 @@ const docTemplate = `{
                 "summary": "Search orders",
                 "parameters": [
                     {
-                        "description": "Search query",
-                        "name": "query",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object"
-                        }
+                        "type": "string",
+                        "description": "Customer ID to search for",
+                        "name": "customer_id",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -202,28 +137,13 @@ const docTemplate = `{
                                 "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Order"
                             }
                         }
-                    },
-                    "204": {
-                        "description": "No Content"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error"
-                        }
                     }
                 }
             }
         },
-        "/orders/simple-search": {
+        "/api/v1/orders/simple-search": {
             "get": {
-                "description": "Search orders using a simple query parameter",
+                "description": "Search orders using a simple query string",
                 "consumes": [
                     "application/json"
                 ],
@@ -252,26 +172,11 @@ const docTemplate = `{
                                 "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Order"
                             }
                         }
-                    },
-                    "204": {
-                        "description": "No Content"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error"
-                        }
                     }
                 }
             }
         },
-        "/products": {
+        "/api/v1/products": {
             "get": {
                 "description": "Get a list of all products",
                 "consumes": [
@@ -283,7 +188,7 @@ const docTemplate = `{
                 "tags": [
                     "products"
                 ],
-                "summary": "List all products",
+                "summary": "Get all products",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -293,20 +198,11 @@ const docTemplate = `{
                                 "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Product"
                             }
                         }
-                    },
-                    "204": {
-                        "description": "No Content"
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error"
-                        }
                     }
                 }
             },
             "post": {
-                "description": "Create a new product with the provided details",
+                "description": "Create a new product in the system",
                 "consumes": [
                     "application/json"
                 ],
@@ -319,7 +215,7 @@ const docTemplate = `{
                 "summary": "Create a new product",
                 "parameters": [
                     {
-                        "description": "Product details",
+                        "description": "Product object",
                         "name": "product",
                         "in": "body",
                         "required": true,
@@ -334,25 +230,13 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Product"
                         }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error"
-                        }
                     }
                 }
             }
         },
-        "/products/{id}": {
+        "/api/v1/products/{id}": {
             "get": {
-                "description": "Get product details by ID",
+                "description": "Get a product by its ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -378,23 +262,11 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Product"
                         }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error"
-                        }
                     }
                 }
             }
         },
-        "/users": {
+        "/api/v1/users": {
             "get": {
                 "description": "Get a list of all users in the system",
                 "consumes": [
@@ -479,7 +351,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/users/{id}": {
+        "/api/v1/users/{id}": {
             "get": {
                 "description": "Get user details by their ID",
                 "consumes": [
@@ -494,7 +366,7 @@ const docTemplate = `{
                 "summary": "Get user by ID",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "User ID",
                         "name": "id",
                         "in": "path",
@@ -524,6 +396,64 @@ const docTemplate = `{
                             "additionalProperties": {
                                 "type": "string"
                             }
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "Get the health status of all system components",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Get health status",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler_health.HealthStatus"
+                        }
+                    }
+                }
+            }
+        },
+        "/orders": {
+            "get": {
+                "description": "Get a list of all orders",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders"
+                ],
+                "summary": "List all orders",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_model.Order"
+                            }
+                        }
+                    },
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Napat_golang-testcontainers-demo_pkg_errors.Error"
                         }
                     }
                 }
@@ -703,14 +633,6 @@ const docTemplate = `{
                 "StatusInactive",
                 "StatusSuspended"
             ]
-        },
-        "internal_handler.MessageRequest": {
-            "type": "object",
-            "properties": {
-                "content": {
-                    "type": "string"
-                }
-            }
         },
         "internal_handler_health.HealthStatus": {
             "type": "object",

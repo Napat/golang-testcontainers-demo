@@ -1,0 +1,67 @@
+@startuml API Architecture
+
+package "API Layer" {
+  [HTTP Server] as server
+  [Router] as router
+  
+  package "Handlers" {
+    [Health Handler] as health
+    [User Handler] as user
+    [Product Handler] as product
+    [Order Handler] as order
+    [Message Handler] as message
+  }
+}
+
+package "Repository Layer" {
+  [User Repository] as userRepo
+  [Product Repository] as productRepo
+  [Order Repository] as orderRepo
+  [Cache Repository] as cacheRepo
+  [Event Repository] as eventRepo
+}
+
+package "External Services" {
+  database "MySQL" as mysql
+  database "PostgreSQL" as postgres
+  database "Redis" as redis
+  queue "Kafka" as kafka
+  database "Elasticsearch" as elastic
+}
+
+' Request Flow
+client -> server: HTTP Request
+server -> router: Route Request
+
+' Health Check Flow
+router -> health: /health/*
+health --> mysql: Check Connection
+health --> postgres: Check Connection
+health --> redis: Check Connection
+health --> kafka: Check Connection
+health --> elastic: Check Connection
+
+' User Flow
+router -> user: /users/*
+user --> userRepo
+userRepo --> mysql: CRUD Operations
+
+' Product Flow
+router -> product: /products/*
+product --> productRepo
+productRepo --> postgres: CRUD Operations
+productRepo --> cacheRepo
+cacheRepo --> redis: Cache Operations
+
+' Order Flow
+router -> order: /orders/*
+order --> orderRepo
+orderRepo --> postgres: CRUD Operations
+orderRepo --> eventRepo
+eventRepo --> kafka: Publish Events
+
+' Message Flow
+router -> message: /messages/*
+message --> elastic: Search/Index
+
+@enduml

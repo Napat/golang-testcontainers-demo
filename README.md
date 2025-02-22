@@ -1,4 +1,4 @@
-# Testcontainers Go Demo
+# Go Integration Tests Using Testcontainers for Containerized Datastores
 
 This project demonstrates how to write integration tests using [Testcontainers for Go](https://golang.testcontainers.org/). It provides examples of testing different infrastructure components including databases, caching, and message queues.
 
@@ -642,13 +642,10 @@ The following endpoints are available:
    - Clean test data management
    - Proper error handling
 
-## Contributing
-
-Feel free to contribute examples for other databases or infrastructure components!
-
-## License
-
-MIT License
+4. Logging
+   - Structured logging
+   - Log levels
+   - Error handling
 
 ## Usage
 
@@ -746,3 +743,11 @@ curl http://localhost:8080/api/v1/orders/simple-search?q=Test%20Product
 
 - [Testcontainers.com Getting started](https://testcontainers.com/getting-started/)
 - [testcontainers modules](https://golang.testcontainers.org/modules/)
+
+## Contributing
+
+Feel free to contribute examples for other databases or infrastructure components!
+
+## License
+
+MIT License
